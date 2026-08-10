@@ -39,9 +39,7 @@
     style="width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;margin-top:8px"
   >
 
-  <button class="action" id="loginBtn">
-    로그인
-  </button>
+  <button class="action" id="loginBtn">로그인</button>
 
   <div id="loginStatus" class="status"></div>
 
@@ -137,8 +135,10 @@ $('loginBtn').onclick = async () => {
   const password = $('password').value;
 
   if (!email || !password) {
+
     $('loginStatus').textContent =
       '이메일과 비밀번호를 입력하세요.';
+
     return;
   }
 
@@ -176,12 +176,13 @@ $('logoutBtn').onclick = async () => {
 
 /* =========================
    엑셀 날짜 처리
-   ※ UTC 변환을 사용하지 않음
+   UTC 변환을 사용하지 않음
 ========================= */
 
 function dateKey(v) {
 
   /* 엑셀 날짜가 숫자로 들어오는 경우 */
+
   if (typeof v === 'number') {
 
     const d = XLSX.SSF.parse_date_code(v);
@@ -194,6 +195,7 @@ function dateKey(v) {
 
 
   /* YYYY-MM-DD */
+
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
 
     return s;
@@ -201,6 +203,7 @@ function dateKey(v) {
 
 
   /* YYYY/MM/DD 또는 YYYY.MM.DD */
+
   const m =
     s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
 
@@ -224,6 +227,20 @@ function clean(v) {
   return String(v ?? '')
     .replace(/\r/g, '')
     .trim();
+}
+
+
+/* =========================
+   소분류 이름 정리
+========================= */
+
+function normalizeSubText(v) {
+
+  return clean(v)
+    .replace(/\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
 }
 
 
@@ -259,7 +276,7 @@ $('previewBtn').onclick = async () => {
     );
 
 
-    /* 첫 번째 시트 사용 */
+    /* 첫 번째 시트 */
 
     const ws =
       wb.Sheets[wb.SheetNames[0]];
@@ -321,13 +338,24 @@ $('previewBtn').onclick = async () => {
 
 
     /* =========================
-       메뉴 데이터 분석
+       메뉴 분석
     ========================= */
 
     parsed = [];
 
     let meal = null;
+
+    /*
+      현재 적용 중인 소분류.
+      
+      예:
+      멀티바
+      Take Out 샐러드
+      석식 멀티바
+    */
+
     let sub = null;
+
     let order = 0;
 
 
@@ -337,18 +365,13 @@ $('previewBtn').onclick = async () => {
       r++
     ) {
 
-      const a =
-        clean(rows[r]?.[0]);
-
-      const b =
-        clean(rows[r]?.[1]);
-
-      const c =
-        clean(rows[r]?.[2]);
+      const a = clean(rows[r]?.[0]);
+      const b = clean(rows[r]?.[1]);
+      const c = clean(rows[r]?.[2]);
 
 
       /* =========================
-         조식 / 중식 / 석식
+         조식 / 중식 / 석식 시작
       ========================= */
 
       if (
@@ -362,40 +385,6 @@ $('previewBtn').onclick = async () => {
         sub = null;
 
         order = 0;
-      }
-
-
-      /* =========================
-         멀티바
-      ========================= */
-
-      if (b === '멀티바') {
-
-        if (meal === '석식') {
-
-          sub = '석식 멀티바';
-
-        } else if (meal === '중식') {
-
-          sub = '멀티바';
-        }
-      }
-
-
-      /* =========================
-         중식 하위 메뉴
-      ========================= */
-
-      if (
-        meal === '중식' &&
-        (
-          c === '샐러드' ||
-          c === '샌드위치' ||
-          c === '콤보'
-        )
-      ) {
-
-        sub = c;
       }
 
 
@@ -416,7 +405,94 @@ $('previewBtn').onclick = async () => {
 
 
       /* =========================
-         날짜별 메뉴 저장
+         중식 멀티바
+      ========================= */
+
+      if (
+        meal === '중식' &&
+        normalizeSubText(b) === '멀티바'
+      ) {
+
+        sub = '멀티바';
+
+        order = 0;
+      }
+
+
+      /* =========================
+         중식 Take Out 샐러드
+         
+         실제 엑셀에는
+         
+         take·out
+         샐러드
+         
+         가 여러 줄에 걸쳐 표시됨.
+         
+         첫 줄의 b 또는 c를 보고
+         이후 샐러드/샌드위치/콤보까지
+         같은 소분류로 묶음.
+      ========================= */
+
+      const bNorm = normalizeSubText(b);
+      const cNorm = normalizeSubText(c);
+
+
+      if (
+        meal === '중식' &&
+        (
+          bNorm.includes('take·out') ||
+          bNorm.includes('take-out') ||
+          bNorm.includes('take out') ||
+          bNorm.includes('takeout')
+        )
+      ) {
+
+        sub = 'Take Out 샐러드';
+
+        order = 0;
+      }
+
+
+      /* =========================
+         실제 엑셀의
+         샐러드 / 샌드위치 / 콤보 행
+         
+         첫 행에서 이미 Take Out 샐러드가
+         설정되었으므로 그대로 유지.
+      ========================= */
+
+      if (
+        meal === '중식' &&
+        sub === 'Take Out 샐러드' &&
+        (
+          cNorm === '샐러드' ||
+          cNorm === '샌드위치' ||
+          cNorm === '콤보'
+        )
+      ) {
+
+        /* 소분류 유지 */
+      }
+
+
+      /* =========================
+         석식 멀티바
+      ========================= */
+
+      if (
+        meal === '석식' &&
+        normalizeSubText(b) === '멀티바'
+      ) {
+
+        sub = '석식 멀티바';
+
+        order = 0;
+      }
+
+
+      /* =========================
+         메뉴 저장
       ========================= */
 
       for (
@@ -428,6 +504,52 @@ $('previewBtn').onclick = async () => {
 
 
         if (!value) continue;
+
+
+        /*
+          소분류 이름 자체는 메뉴로 저장하지 않음.
+          
+          예:
+          멀티바
+          take·out 샐러드
+          
+          같은 셀은 실제 메뉴가 아니므로
+          메뉴 데이터에서 제외.
+        */
+
+        const bNorm2 = normalizeSubText(b);
+
+        const isCategoryRow =
+          bNorm2 === '멀티바' ||
+          bNorm2.includes('take·out') ||
+          bNorm2.includes('take-out') ||
+          bNorm2.includes('take out') ||
+          bNorm2.includes('takeout');
+
+
+        if (isCategoryRow) {
+
+          continue;
+        }
+
+
+        /*
+          중식의 샐러드/샌드위치/콤보 표시는
+          소분류이므로 메뉴 이름으로 사용하지 않음.
+        */
+
+        if (
+          meal === '중식' &&
+          sub === 'Take Out 샐러드' &&
+          (
+            cNorm === '샐러드' ||
+            cNorm === '샌드위치' ||
+            cNorm === '콤보'
+          )
+        ) {
+
+          continue;
+        }
 
 
         parsed.push({
@@ -448,7 +570,7 @@ $('previewBtn').onclick = async () => {
 
 
     /* =========================
-       메뉴 존재 여부 확인
+       메뉴 확인
     ========================= */
 
     if (!parsed.length) {
@@ -479,7 +601,7 @@ $('previewBtn').onclick = async () => {
 
 
     /* =========================
-       미리보기 화면
+       미리보기
     ========================= */
 
     $('preview').classList.remove(
@@ -544,17 +666,18 @@ $('previewBtn').onclick = async () => {
       '</table>';
 
 
-    /* =========================
-       상태 메시지
-    ========================= */
-
     $('status').textContent =
 
       `총 ${dates.length}일 / ${parsed.length}개 메뉴를 확인했습니다.
 
 하위 메뉴 자동 구분:
-중식(멀티바·샐러드·샌드위치·콤보),
-석식(석식 멀티바)
+
+중식
+- 멀티바
+- Take Out 샐러드
+
+석식
+- 석식 멀티바
 
 내용이 맞으면 "메뉴 업데이트"를 눌러주세요.`;
 
@@ -589,9 +712,7 @@ $('uploadBtn').onclick = async () => {
 
   try {
 
-    /* =========================
-       엑셀에 포함된 날짜
-    ========================= */
+    /* 엑셀에 포함된 날짜 */
 
     const dates =
       [
@@ -601,9 +722,7 @@ $('uploadBtn').onclick = async () => {
       ].sort();
 
 
-    /* =========================
-       해당 날짜 기존 메뉴 삭제
-    ========================= */
+    /* 기존 메뉴 삭제 */
 
     for (const d of dates) {
 
@@ -618,9 +737,7 @@ $('uploadBtn').onclick = async () => {
     }
 
 
-    /* =========================
-       새 메뉴 저장
-    ========================= */
+    /* 새 메뉴 저장 */
 
     for (
       let i = 0;
@@ -640,9 +757,7 @@ $('uploadBtn').onclick = async () => {
     }
 
 
-    /* =========================
-       완료
-    ========================= */
+    /* 완료 */
 
     $('status').textContent =
 
