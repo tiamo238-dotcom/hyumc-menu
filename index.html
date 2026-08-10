@@ -339,21 +339,25 @@ async function showDate() {
 
     if (subGroups['__MAIN__']) {
 
-      subGroups['__MAIN__'].forEach(row => {
+  subGroups['__MAIN__'].forEach((row, index) => {
 
-        const p = document.createElement('div');
+    const p = document.createElement('div');
 
-        p.className = 'menu-item';
+    /* 각 식사의 첫 번째 메뉴를 메인메뉴로 강조 */
+    p.className =
+      index === 0
+        ? 'menu-item main-menu'
+        : 'menu-item';
 
-        p.innerHTML =
-          String(row.menu_name || '')
-            .replace(/\n/g, '<br>');
+    p.innerHTML =
+      String(row.menu_name || '')
+        .replace(/\n/g, '<br>');
 
-        card.appendChild(p);
+    card.appendChild(p);
 
-      });
+  });
 
-    }
+}
 
 
     /*
