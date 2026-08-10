@@ -39,3 +39,8 @@ input[type=file]{width:100%;padding:13px;border:1px dashed #d8c8bb;border-radius
   padding: 14px 16px;
   margin-bottom: 8px;
 }
+/* 메인 메뉴 강조 */
+.main-menu {
+  font-weight: 800;
+  color: #e26f3d;
+}
