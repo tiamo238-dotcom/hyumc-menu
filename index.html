@@ -1,613 +1,509 @@
 <!doctype html>
 <html lang="ko">
-
 <head>
-
 <meta charset="utf-8">
-
-<meta
-name="viewport"
-content="width=device-width,initial-scale=1"
->
-
-<title>오늘의 메뉴</title>
-
-<link
-rel="stylesheet"
-href="style.css"
->
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>한양대학교병원 직원식당 메뉴</title>
+<link rel="stylesheet" href="style.css">
 </head>
-
 
 <body>
 
 <div class="wrap">
 
+  <section class="hero">
+    <div class="logo">🍽️</div>
+    <div class="title">한양대학교병원 직원식당 메뉴</div>
+    <div class="subtitle">맛있는 식사시간 되세요 🌷</div>
 
-<section class="hero">
+    <div class="datebar">
+      <button id="prev">‹</button>
+      <select id="dateSelect"></select>
+      <button id="next">›</button>
+    </div>
 
-<div class="logo">🍽️</div>
+    <button class="todaybtn" id="todayBtn">
+      오늘 메뉴로 돌아가기
+    </button>
+  </section>
 
-<div class="title">
-오늘의 메뉴
-</div>
+  <div id="menus"></div>
 
-<div class="subtitle">
-맛있는 식사시간 되세요 🌷
-</div>
-
-
-<div class="datebar">
-
-<button id="prev">‹</button>
-
-<select id="dateSelect"></select>
-
-<button id="next">›</button>
-
-</div>
-
-
-<button
-class="todaybtn"
-id="todayBtn"
->
-오늘 메뉴로 돌아가기
-</button>
-
-</section>
-
-
-<div id="menus"></div>
-
-
-<div class="notice">
-
-※ 식자재 수급에 따라 메뉴가 변경될 수 있습니다.
-<br>
-※ 알레르기 주의 메뉴가 있으니 게시된 알레르기 정보를 확인해 주세요.
+  <div class="notice">
+    ※ 식자재 수급에 따라 메뉴가 변경될 수 있습니다.<br>
+    ※ 알레르기 주의 메뉴가 있으니 게시된 알레르기 정보를 확인해 주세요.
+  </div>
 
 </div>
-
-</div>
-
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script src="js/config.js"></script>
-
-
 
 <script>
 
-const sb =
-supabase.createClient(
-SUPABASE_URL,
-SUPABASE_PUBLISHABLE_KEY
+const sb = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
 );
 
+const dateSelect = document.getElementById('dateSelect');
+const menusEl = document.getElementById('menus');
 
-const dateSelect =
-document.getElementById('dateSelect');
+const prev = document.getElementById('prev');
+const next = document.getElementById('next');
+const todayBtn = document.getElementById('todayBtn');
 
-const menusEl =
-document.getElementById('menus');
-
-const prev =
-document.getElementById('prev');
-
-const next =
-document.getElementById('next');
-
-const todayBtn =
-document.getElementById('todayBtn');
+let dates = [];
+let currentIndex = 0;
 
 
-let dates=[];
+/* =========================
+   식사 종류 설정
+========================= */
 
-let currentIndex=0;
-
-
-
-/* =====================================================
-   식사 그룹
-===================================================== */
-
-const groups=[
-
-{
-name:'조식',
-icon:'🌅',
-children:['조식']
-},
-
-{
-name:'중식',
-icon:'🍱',
-children:[
-'중식',
-'멀티바',
-'Take Out 샐러드',
-'샐러드',
-'샌드위치',
-'콤보'
-]
-},
-
-{
-name:'석식',
-icon:'🌙',
-children:[
-'석식',
-'석식 멀티바'
-]
-}
-
+const groups = [
+  {
+    name: '조식',
+    icon: '🌅'
+  },
+  {
+    name: '중식',
+    icon: '🍱'
+  },
+  {
+    name: '석식',
+    icon: '🌙'
+  }
 ];
 
 
-const icons={
+/* =========================
+   소분류 아이콘
+========================= */
 
-조식:'🌅',
-
-중식:'🍱',
-
-멀티바:'🌿',
-
-'Take Out 샐러드':'🥗',
-
-샐러드:'🥗',
-
-샌드위치:'🥪',
-
-콤보:'🍙',
-
-석식:'🌙',
-
-'석식 멀티바':'🍵'
-
+const icons = {
+  '멀티바': '🌿',
+  'Take Out 샐러드': '🥗',
+  '샐러드': '🥗',
+  '샌드위치': '🥪',
+  '콤보': '🍙',
+  '석식 멀티바': '🍵'
 };
 
 
+/* =========================
+   날짜 표시
+   ※ 날짜가 하루 밀리지 않도록
+   문자열을 직접 분해해서 표시
+========================= */
 
-/* =====================================================
-   ★ 날짜 표시
-   문자열을 직접 분해해서 Date 시간대 문제 방지
-===================================================== */
+function fmt(k) {
 
-function fmt(k){
+  const parts = String(k).split('-');
 
-const parts =
-String(k).split('-');
+  if (parts.length !== 3) {
+    return k;
+  }
 
-const y =
-Number(parts[0]);
+  const y = Number(parts[0]);
+  const m = Number(parts[1]);
+  const d = Number(parts[2]);
 
-const m =
-Number(parts[1]);
+  const localDate = new Date(y, m - 1, d);
 
-const d =
-Number(parts[2]);
+  const dayNames = [
+    '일',
+    '월',
+    '화',
+    '수',
+    '목',
+    '금',
+    '토'
+  ];
 
-
-const weekday =
-[
-'일',
-'월',
-'화',
-'수',
-'목',
-'금',
-'토'
-];
-
-
-/*
-  UTC 기준으로 요일만 계산
-  날짜 자체는 절대 변환하지 않음
-*/
-
-const day =
-new Date(
-Date.UTC(y,m-1,d)
-).getUTCDay();
+  return `${m}월 ${d}일 (${dayNames[localDate.getDay()]})`;
+}
 
 
-return (
-`${m}월 ${d}일 (${weekday[day]})`
-);
+/* =========================
+   날짜 불러오기
+========================= */
+
+async function loadDates() {
+
+  const { data, error } = await sb
+    .from('menus')
+    .select('menu_date')
+    .order('menu_date', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  dates = [
+    ...new Set(
+      (data || []).map(x => x.menu_date)
+    )
+  ];
+
+  if (!dates.length) {
+
+    menusEl.innerHTML =
+      '<div class="card">등록된 메뉴가 없습니다.</div>';
+
+    return;
+  }
+
+
+  dateSelect.innerHTML = dates
+    .map(d =>
+      `<option value="${d}">${fmt(d)}</option>`
+    )
+    .join('');
+
+
+  /*
+     오늘 날짜
+
+     new Date().toISOString()을 사용하면
+     한국 시간에서 날짜가 하루 밀리는 문제가 생길 수 있으므로
+     브라우저의 현지 날짜를 사용합니다.
+  */
+
+  const now = new Date();
+
+  const today =
+    `${now.getFullYear()}-` +
+    `${String(now.getMonth() + 1).padStart(2, '0')}-` +
+    `${String(now.getDate()).padStart(2, '0')}`;
+
+
+  currentIndex = dates.indexOf(today);
+
+  if (currentIndex < 0) {
+    currentIndex = dates.length - 1;
+  }
+
+  showDate();
+}
+
+
+/* =========================
+   선택된 날짜의 메뉴 표시
+========================= */
+
+async function showDate() {
+
+  const date = dates[currentIndex];
+
+  dateSelect.value = date;
+
+  prev.disabled = currentIndex <= 0;
+  next.disabled = currentIndex >= dates.length - 1;
+
+
+  const { data, error } = await sb
+    .from('menus')
+    .select('*')
+    .eq('menu_date', date)
+    .order('sort_order')
+    .order('id');
+
+
+  if (error) {
+
+    menusEl.innerHTML =
+      `<div class="card">
+        메뉴를 불러오지 못했습니다.<br>
+        ${error.message}
+      </div>`;
+
+    return;
+  }
+
+
+  /*
+  ==========================================
+  핵심 수정 부분
+
+  기존에는
+
+  by[meal_type]
+
+  만 사용해서
+
+  중식
+  석식
+
+  만 구분했습니다.
+
+  이제는
+
+  meal_type
+       ↓
+  sub_type
+
+  구조로 다시 묶습니다.
+  ==========================================
+  */
+
+
+  const byMeal = {};
+
+
+  (data || []).forEach(row => {
+
+    const meal = row.meal_type || '';
+
+    if (!byMeal[meal]) {
+      byMeal[meal] = [];
+    }
+
+    byMeal[meal].push(row);
+
+  });
+
+
+  menusEl.innerHTML = '';
+
+
+  groups.forEach(group => {
+
+    const mealRows = byMeal[group.name];
+
+    if (!mealRows || !mealRows.length) {
+      return;
+    }
+
+
+    /* 식사 카드 */
+
+    const card = document.createElement('section');
+
+    card.className = 'card';
+
+
+    card.innerHTML = `
+      <div class="card-head">
+        <span class="card-icon">${group.icon}</span>
+        <span class="card-title">${group.name}</span>
+        <span class="card-sub">${fmt(date)}</span>
+      </div>
+    `;
+
+
+    /*
+    ==========================================
+    소분류별로 다시 묶기
+
+    예:
+
+    중식
+      ├─ 일반 중식
+      ├─ 멀티바
+      └─ Take Out 샐러드
+
+    석식
+      ├─ 일반 석식
+      └─ 석식 멀티바
+    ==========================================
+    */
+
+
+    const subGroups = {};
+
+    mealRows.forEach(row => {
+
+      const sub =
+        row.sub_type &&
+        String(row.sub_type).trim()
+          ? String(row.sub_type).trim()
+          : '__MAIN__';
+
+
+      if (!subGroups[sub]) {
+        subGroups[sub] = [];
+      }
+
+      subGroups[sub].push(row);
+
+    });
+
+
+    /*
+    ==========================================
+    일반 메뉴 먼저 표시
+    ==========================================
+    */
+
+    if (subGroups['__MAIN__']) {
+
+      subGroups['__MAIN__'].forEach(row => {
+
+        const p = document.createElement('div');
+
+        p.className = 'menu-item';
+
+        p.innerHTML =
+          String(row.menu_name || '')
+            .replace(/\n/g, '<br>');
+
+        card.appendChild(p);
+
+      });
+
+    }
+
+
+    /*
+    ==========================================
+    소분류 메뉴 표시
+    ==========================================
+    */
+
+    Object.keys(subGroups).forEach(sub => {
+
+      if (sub === '__MAIN__') {
+        return;
+      }
+
+
+      const h = document.createElement('div');
+
+      h.className = 'subhead';
+
+
+      /*
+         소분류별 아이콘
+
+         중식 멀티바 → 🌿 멀티바
+         Take Out 샐러드 → 🥗 Take Out 샐러드
+         석식 멀티바 → 🍵 석식 멀티바
+      */
+
+      const icon = icons[sub] || '🍽️';
+
+      h.textContent = `${icon} ${sub}`;
+
+      card.appendChild(h);
+
+
+      /*
+      해당 소분류의 메뉴 표시
+      */
+
+      subGroups[sub].forEach(row => {
+
+        const p = document.createElement('div');
+
+        p.className = 'menu-item';
+
+        p.innerHTML =
+          String(row.menu_name || '')
+            .replace(/\n/g, '<br>');
+
+        card.appendChild(p);
+
+      });
+
+    });
+
+
+    menusEl.appendChild(card);
+
+  });
 
 }
 
 
-
-/* =====================================================
-   오늘 날짜
-   toISOString() 사용 금지
-===================================================== */
-
-function todayKey(){
-
-const now =
-new Date();
-
-return (
-
-now.getFullYear() +
-'-' +
-String(
-now.getMonth()+1
-).padStart(2,'0') +
-'-' +
-String(
-now.getDate()
-).padStart(2,'0')
-
-);
-
-}
-
-
-
-/* =====================================================
-   날짜 목록
-===================================================== */
-
-async function loadDates(){
-
-const {
-data,
-error
-} =
-await sb
-.from('menus')
-.select('menu_date')
-.order(
-'menu_date',
-{
-ascending:true
-}
-);
-
-
-if(error){
-
-throw error;
-
-}
-
-
-dates=[
-...new Set(
-(data||[]).map(
-x=>String(x.menu_date)
-)
-)
-].sort();
-
-
-if(!dates.length){
-
-menusEl.innerHTML=
-'<div class="card">등록된 메뉴가 없습니다.</div>';
-
-return;
-
-}
-
-
-dateSelect.innerHTML=
-
-dates.map(
-(d,i)=>
-`<option value="${d}">
-${fmt(d)}
-</option>`
-).join('');
-
-
-/*
-  오늘 날짜 찾기
-*/
-
-const today =
-todayKey();
-
-
-currentIndex =
-dates.indexOf(today);
-
-
-/*
-  오늘 메뉴가 없으면
-  가장 가까운 마지막 날짜 표시
-*/
-
-if(currentIndex<0){
-
-currentIndex =
-dates.length-1;
-
-}
-
-
-showDate();
-
-}
-
-
-
-/* =====================================================
-   날짜별 메뉴 표시
-===================================================== */
-
-async function showDate(){
-
-const date =
-dates[currentIndex];
-
-
-dateSelect.value =
-date;
-
-
-prev.disabled =
-currentIndex<=0;
-
-
-next.disabled =
-currentIndex>=dates.length-1;
-
-
-const {
-data,
-error
-} =
-await sb
-.from('menus')
-.select('*')
-.eq(
-'menu_date',
-date
-)
-.order(
-'sort_order'
-)
-.order('id');
-
-
-if(error){
-
-menusEl.innerHTML=
-`
-<div class="card">
-메뉴를 불러오지 못했습니다.
-<br>
-${error.message}
-</div>
-`;
-
-return;
-
-}
-
-
-const by={};
-
-
-(data||[]).forEach(r=>{
-
-(by[r.meal_type] ??= [])
-.push(r);
-
-});
-
-
-menusEl.innerHTML='';
-
-
-groups.forEach(g=>{
-
-if(
-!by[g.name] &&
-!g.children.some(
-x=>by[x]
-)
-){
-
-return;
-
-}
-
-
-const card =
-document.createElement('section');
-
-
-card.className='card';
-
-
-card.innerHTML=
-
-`
-<div class="card-head">
-
-<span class="card-icon">
-${g.icon}
-</span>
-
-<span class="card-title">
-${g.name}
-</span>
-
-<span class="card-sub">
-${fmt(date)}
-</span>
-
-</div>
-`;
-
-
-g.children.forEach(sub=>{
-
-if(
-!by[sub]?.length
-){
-
-return;
-
-}
-
-
-/*
-  하위 메뉴 제목
-*/
-
-if(
-sub!==g.name
-){
-
-const h =
-document.createElement('div');
-
-h.className='subhead';
-
-h.textContent =
-icons[sub]+' '+sub;
-
-card.appendChild(h);
-
-}
-
-
-/*
-  메뉴 표시
-*/
-
-by[sub].forEach(r=>{
-
-const p =
-document.createElement('div');
-
-p.className='menu-item';
-
-p.innerHTML =
-String(
-r.menu_name
-)
-.replace(
-/\n/g,
-'<br>'
-);
-
-card.appendChild(p);
-
-});
-
-});
-
-
-menusEl.appendChild(card);
-
-});
-
-}
-
-
-
-/* =====================================================
+/* =========================
    날짜 선택
-===================================================== */
+========================= */
 
-dateSelect.onchange=()=>{
+dateSelect.onchange = () => {
 
-currentIndex =
-dates.indexOf(
-dateSelect.value
-);
+  currentIndex =
+    dates.indexOf(dateSelect.value);
 
-showDate();
+  showDate();
 
 };
 
 
+/* =========================
+   이전 날짜
+========================= */
 
-/* 이전 */
+prev.onclick = () => {
 
-prev.onclick=()=>{
+  if (currentIndex > 0) {
 
-if(currentIndex>0){
+    currentIndex--;
 
-currentIndex--;
+    showDate();
 
-showDate();
-
-}
-
-};
-
-
-
-/* 다음 */
-
-next.onclick=()=>{
-
-if(
-currentIndex<
-dates.length-1
-){
-
-currentIndex++;
-
-showDate();
-
-}
+  }
 
 };
 
 
+/* =========================
+   다음 날짜
+========================= */
 
-/* =====================================================
+next.onclick = () => {
+
+  if (currentIndex < dates.length - 1) {
+
+    currentIndex++;
+
+    showDate();
+
+  }
+
+};
+
+
+/* =========================
    오늘 메뉴
-===================================================== */
+========================= */
 
-todayBtn.onclick=()=>{
+todayBtn.onclick = () => {
 
-const today =
-todayKey();
+  const now = new Date();
 
-const i =
-dates.indexOf(today);
-
-
-currentIndex =
-i>=0
-?i
-:dates.length-1;
+  const today =
+    `${now.getFullYear()}-` +
+    `${String(now.getMonth() + 1).padStart(2, '0')}-` +
+    `${String(now.getDate()).padStart(2, '0')}`;
 
 
-showDate();
+  const index = dates.indexOf(today);
+
+  currentIndex =
+    index >= 0
+      ? index
+      : dates.length - 1;
+
+  showDate();
 
 };
 
 
+/* =========================
+   시작
+========================= */
 
-/* 시작 */
+loadDates().catch(e => {
 
-loadDates()
-.catch(
-e=>
-menusEl.innerHTML=
-`
-<div class="card">
-Supabase 연결을 확인해주세요.
-<br>
-${e.message}
-</div>
-`
-);
+  menusEl.innerHTML =
+    `<div class="card">
+      Supabase 연결을 확인해주세요.<br>
+      ${e.message}
+    </div>`;
+
+});
 
 </script>
 
