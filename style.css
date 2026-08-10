@@ -34,3 +34,12 @@ input[type=file]{width:100%;padding:13px;border:1px dashed #d8c8bb;border-radius
   font-weight: 800;
   color: #e26f3d;
 }
+
+/* 날짜 선택 강조 */
+#dateSelect {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #5a4035;
+  padding: 10px 14px;
+  border-radius: 12px;
+}
