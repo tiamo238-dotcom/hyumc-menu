@@ -1,29 +1,60 @@
 <!doctype html>
 <html lang="ko">
+
 <head>
+
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1"
+>
+
 <title>식단 관리자</title>
-<link rel="stylesheet" href="style.css">
+
+<link
+  rel="stylesheet"
+  href="style.css"
+>
+
 </head>
+
 
 <body>
 
+
 <div class="admin-wrap">
 
+
 <section class="hero">
+
   <div class="logo">👩‍🍳</div>
-  <div class="title">식단 관리자</div>
-  <div class="subtitle">엑셀파일을 올리면 메뉴가 업데이트됩니다.</div>
+
+  <div class="title">
+    식단 관리자
+  </div>
+
+  <div class="subtitle">
+    엑셀파일을 올리면 메뉴가 업데이트됩니다.
+  </div>
+
 </section>
 
-<section id="loginCard" class="admin-card">
+
+
+<section
+  id="loginCard"
+  class="admin-card"
+>
+
 
   <h2>🔐 관리자 로그인</h2>
+
 
   <p class="small">
     관리자 계정으로 로그인해야 메뉴를 수정할 수 있습니다.
   </p>
+
 
   <input
     id="email"
@@ -32,6 +63,7 @@
     style="width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;margin-top:10px"
   >
 
+
   <input
     id="password"
     type="password"
@@ -39,42 +71,88 @@
     style="width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;margin-top:8px"
   >
 
-  <button class="action" id="loginBtn">로그인</button>
 
-  <div id="loginStatus" class="status"></div>
+  <button
+    class="action"
+    id="loginBtn"
+  >
+    로그인
+  </button>
+
+
+  <div
+    id="loginStatus"
+    class="status"
+  ></div>
+
 
 </section>
 
 
-<section id="uploadCard" class="admin-card hidden">
+
+<section
+  id="uploadCard"
+  class="admin-card hidden"
+>
+
 
   <h2>📁 새 식단 업로드</h2>
+
 
   <p class="small">
     현재 사용 중인 주간 메뉴 엑셀파일(.xlsx)을 그대로 선택하세요.
   </p>
 
-  <input id="file" type="file" accept=".xlsx,.xls">
 
-  <button class="action secondary" id="previewBtn">
+  <input
+    id="file"
+    type="file"
+    accept=".xlsx,.xls"
+  >
+
+
+  <button
+    class="action secondary"
+    id="previewBtn"
+  >
     1. 엑셀 미리보기
   </button>
 
-  <div id="preview" class="preview hidden"></div>
 
-  <button class="action" id="uploadBtn" disabled>
+  <div
+    id="preview"
+    class="preview hidden"
+  ></div>
+
+
+  <button
+    class="action"
+    id="uploadBtn"
+    disabled
+  >
     2. 메뉴 업데이트
   </button>
 
-  <div id="status" class="status"></div>
 
-  <button class="action secondary" id="logoutBtn">
+  <div
+    id="status"
+    class="status"
+  ></div>
+
+
+  <button
+    class="action secondary"
+    id="logoutBtn"
+  >
     로그아웃
   </button>
 
+
 </section>
 
+
 </div>
+
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -84,684 +162,1079 @@
 <script src="js/config.js"></script>
 
 
+
 <script>
 
-const sb = supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_PUBLISHABLE_KEY
-);
 
-const $ = id => document.getElementById(id);
+/* =====================================================
+   Supabase
+===================================================== */
+
+const sb =
+  supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
+  );
+
+
+const $ =
+  id => document.getElementById(id);
+
 
 let parsed = [];
 
 
-/* =========================
-   로그인 상태 확인
-========================= */
+
+/* =====================================================
+   로그인 상태
+===================================================== */
 
 async function refresh() {
 
-  const { data, error } = await sb.auth.getSession();
+  const {
+    data,
+    error
+  } =
+    await sb.auth.getSession();
+
 
   if (error) {
-    $('loginStatus').textContent = error.message;
+
+    $('loginStatus').textContent =
+      error.message;
+
     return;
   }
 
-  const logged = !!data.session;
 
-  $('loginCard').classList.toggle('hidden', logged);
-  $('uploadCard').classList.toggle('hidden', !logged);
+  const logged =
+    !!data.session;
+
+
+  $('loginCard')
+    .classList
+    .toggle(
+      'hidden',
+      logged
+    );
+
+
+  $('uploadCard')
+    .classList
+    .toggle(
+      'hidden',
+      !logged
+    );
+
 }
 
 
-/* =========================
-   로그인 상태 변경 감지
-========================= */
 
-sb.auth.onAuthStateChange(() => {
-  refresh();
-});
+sb.auth.onAuthStateChange(
+  () => refresh()
+);
 
 
-/* =========================
+
+/* =====================================================
    로그인
-========================= */
+===================================================== */
 
-$('loginBtn').onclick = async () => {
+$('loginBtn').onclick =
+  async () => {
 
-  const email = $('email').value.trim();
-  const password = $('password').value;
+    const email =
+      $('email')
+        .value
+        .trim();
 
-  if (!email || !password) {
+
+    const password =
+      $('password')
+        .value;
+
+
+    if (!email || !password) {
+
+      $('loginStatus').textContent =
+        '이메일과 비밀번호를 입력하세요.';
+
+      return;
+    }
+
+
+    $('loginBtn').disabled =
+      true;
+
 
     $('loginStatus').textContent =
-      '이메일과 비밀번호를 입력하세요.';
-
-    return;
-  }
-
-  $('loginBtn').disabled = true;
-  $('loginStatus').textContent = '로그인 중...';
-
-  const { error } =
-    await sb.auth.signInWithPassword({
-      email,
-      password
-    });
-
-  $('loginStatus').textContent =
-    error
-      ? '로그인 실패: ' + error.message
-      : '로그인 성공!';
-
-  $('loginBtn').disabled = false;
-
-  await refresh();
-};
+      '로그인 중...';
 
 
-/* =========================
+    const {
+      error
+    } =
+      await sb.auth.signInWithPassword({
+
+        email,
+
+        password
+
+      });
+
+
+    $('loginStatus').textContent =
+      error
+        ? '로그인 실패: ' + error.message
+        : '로그인 성공!';
+
+
+    $('loginBtn').disabled =
+      false;
+
+
+    await refresh();
+
+  };
+
+
+
+/* =====================================================
    로그아웃
-========================= */
+===================================================== */
 
-$('logoutBtn').onclick = async () => {
+$('logoutBtn').onclick =
+  async () => {
 
-  await sb.auth.signOut();
+    await sb.auth.signOut();
 
-  await refresh();
-};
+    await refresh();
+
+  };
 
 
-/* =========================
-   엑셀 날짜 처리
-   UTC 변환을 사용하지 않음
-========================= */
+
+/* =====================================================
+   날짜 처리
+   중요:
+   Date 객체의 UTC 변환을 사용하지 않음
+===================================================== */
 
 function dateKey(v) {
 
-  /* 엑셀 날짜가 숫자로 들어오는 경우 */
 
-  if (typeof v === 'number') {
+  /* 엑셀 숫자 날짜 */
 
-    const d = XLSX.SSF.parse_date_code(v);
+  if (
+    typeof v === 'number'
+  ) {
 
-    return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+    const d =
+      XLSX.SSF.parse_date_code(v);
+
+
+    return (
+
+      `${d.y}-` +
+
+      `${String(d.m).padStart(2,'0')}-` +
+
+      `${String(d.d).padStart(2,'0')}`
+
+    );
+
   }
 
 
-  const s = String(v ?? '').trim();
+
+  const s =
+    String(v ?? '')
+      .trim();
 
 
   /* YYYY-MM-DD */
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+  if (
+    /^\d{4}-\d{2}-\d{2}$/
+      .test(s)
+  ) {
 
     return s;
+
   }
 
 
-  /* YYYY/MM/DD 또는 YYYY.MM.DD */
+
+  /* YYYY/MM/DD */
 
   const m =
-    s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+    s.match(
+      /^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/
+    );
 
 
   if (m) {
 
-    return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+    return (
+
+      `${m[1]}-` +
+
+      `${String(m[2]).padStart(2,'0')}-` +
+
+      `${String(m[3]).padStart(2,'0')}`
+
+    );
+
   }
 
 
   return s;
+
 }
 
 
-/* =========================
+
+/* =====================================================
    셀 내용 정리
-========================= */
+===================================================== */
 
 function clean(v) {
 
   return String(v ?? '')
     .replace(/\r/g, '')
-    .trim();
-}
-
-
-/* =========================
-   소분류 이름 정리
-========================= */
-
-function normalizeSubText(v) {
-
-  return clean(v)
     .replace(/\n/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
+    .trim();
+
 }
 
 
-/* =========================
-   엑셀 미리보기
-========================= */
 
-$('previewBtn').onclick = async () => {
+/* =====================================================
+   소분류 판별용 문자열
+===================================================== */
 
-  const f = $('file').files[0];
+function normalize(v) {
 
-  if (!f) {
+  return clean(v)
+    .toLowerCase()
+    .replace(/[·•ㆍ]/g, '')
+    .replace(/[-_]/g, '')
+    .replace(/\s+/g, '');
 
-    $('status').textContent =
-      '엑셀파일을 선택하세요.';
+}
 
-    return;
+
+
+/* =====================================================
+   한 행의 A~C열 전체를 하나의 문자열로 만듦
+===================================================== */
+
+function rowText(row) {
+
+  return [
+
+    row?.[0],
+
+    row?.[1],
+
+    row?.[2],
+
+    row?.[3]
+
+  ]
+
+    .map(clean)
+
+    .join(' ');
+
+}
+
+
+
+/* =====================================================
+   멀티바 판별
+===================================================== */
+
+function isMultiBar(row) {
+
+  const text =
+    normalize(
+      rowText(row)
+    );
+
+
+  return text.includes(
+    '멀티바'
+  );
+
+}
+
+
+
+/* =====================================================
+   Take Out 샐러드 판별
+===================================================== */
+
+function isTakeOutSalad(row) {
+
+  const text =
+    normalize(
+      rowText(row)
+    );
+
+
+  return (
+
+    text.includes('takeout') ||
+
+    text.includes('takeout샐러드') ||
+
+    text.includes('takeout샐러드') ||
+
+    text.includes('takeout샐러드')
+
+  );
+
+}
+
+
+
+/* =====================================================
+   실제 소분류 제목 행인지 확인
+===================================================== */
+
+function isCategoryOnlyRow(row) {
+
+  const cells = [
+
+    clean(row?.[0]),
+
+    clean(row?.[1]),
+
+    clean(row?.[2]),
+
+    clean(row?.[3])
+
+  ];
+
+
+  const allText =
+    normalize(
+      cells.join(' ')
+    );
+
+
+  /* 멀티바 */
+
+  if (
+    allText === '멀티바'
+  ) {
+
+    return true;
+
   }
 
 
-  try {
 
-    /* 엑셀 파일 읽기 */
+  /* Take Out 샐러드 */
 
-    const buf = await f.arrayBuffer();
+  if (
+    allText === 'takeout샐러드'
+  ) {
 
-    const wb = XLSX.read(
-      buf,
-      {
-        type: 'array',
-        cellDates: false
-      }
-    );
+    return true;
+
+  }
 
 
-    /* 첫 번째 시트 */
 
-    const ws =
-      wb.Sheets[wb.SheetNames[0]];
+  return false;
 
-
-    /* 엑셀을 배열 형태로 읽기 */
-
-    const rows =
-      XLSX.utils.sheet_to_json(
-        ws,
-        {
-          header: 1,
-          defval: null,
-          raw: true
-        }
-      );
+}
 
 
-    if (rows.length < 3) {
 
-      throw new Error(
-        '엑셀 내용이 너무 적습니다.'
-      );
+/* =====================================================
+   엑셀 미리보기
+===================================================== */
+
+$('previewBtn').onclick =
+  async () => {
+
+
+    const f =
+      $('file')
+        .files[0];
+
+
+    if (!f) {
+
+      $('status').textContent =
+        '엑셀파일을 선택하세요.';
+
+      return;
     }
 
 
-    /* =========================
-       날짜 열 찾기
-    ========================= */
 
-    const header = rows[1] || [];
-
-    const dateCols = [];
+    try {
 
 
-    for (
-      let c = 0;
-      c < header.length;
-      c++
-    ) {
+      /* ---------------------------------------------
+         엑셀 읽기
+      --------------------------------------------- */
 
-      const k = dateKey(header[c]);
-
-      if (
-        /^\d{4}-\d{2}-\d{2}$/.test(k)
-      ) {
-
-        dateCols.push([c, k]);
-      }
-    }
+      const buf =
+        await f.arrayBuffer();
 
 
-    if (!dateCols.length) {
-
-      throw new Error(
-        '2번째 행에서 날짜를 찾지 못했습니다.'
-      );
-    }
-
-
-    /* =========================
-       메뉴 분석
-    ========================= */
-
-    parsed = [];
-
-    let meal = null;
-
-    /*
-      현재 적용 중인 소분류.
-      
-      예:
-      멀티바
-      Take Out 샐러드
-      석식 멀티바
-    */
-
-    let sub = null;
-
-    let order = 0;
+      const wb =
+        XLSX.read(
+          buf,
+          {
+            type: 'array',
+            cellDates: false
+          }
+        );
 
 
-    for (
-      let r = 2;
-      r < rows.length;
-      r++
-    ) {
-
-      const a = clean(rows[r]?.[0]);
-      const b = clean(rows[r]?.[1]);
-      const c = clean(rows[r]?.[2]);
+      const ws =
+        wb.Sheets[
+          wb.SheetNames[0]
+        ];
 
 
-      /* =========================
-         조식 / 중식 / 석식 시작
-      ========================= */
-
-      if (
-        a === '조식' ||
-        a === '중식' ||
-        a === '석식'
-      ) {
-
-        meal = a;
-
-        sub = null;
-
-        order = 0;
-      }
-
-
-      /* =========================
-         원산지 영역에서 종료
-      ========================= */
-
-      if (
-        b === '원 산 지' ||
-        a === '원 산 지'
-      ) {
-
-        break;
-      }
-
-
-      if (!meal) continue;
-
-
-      /* =========================
-         중식 멀티바
-      ========================= */
-
-      if (
-        meal === '중식' &&
-        normalizeSubText(b) === '멀티바'
-      ) {
-
-        sub = '멀티바';
-
-        order = 0;
-      }
-
-
-      /* =========================
-         중식 Take Out 샐러드
-         
-         실제 엑셀에는
-         
-         take·out
-         샐러드
-         
-         가 여러 줄에 걸쳐 표시됨.
-         
-         첫 줄의 b 또는 c를 보고
-         이후 샐러드/샌드위치/콤보까지
-         같은 소분류로 묶음.
-      ========================= */
-
-      const bNorm = normalizeSubText(b);
-      const cNorm = normalizeSubText(c);
+      const rows =
+        XLSX.utils.sheet_to_json(
+          ws,
+          {
+            header: 1,
+            defval: null,
+            raw: true
+          }
+        );
 
 
       if (
-        meal === '중식' &&
-        (
-          bNorm.includes('take·out') ||
-          bNorm.includes('take-out') ||
-          bNorm.includes('take out') ||
-          bNorm.includes('takeout')
-        )
+        rows.length < 3
       ) {
 
-        sub = 'Take Out 샐러드';
+        throw new Error(
+          '엑셀 내용이 너무 적습니다.'
+        );
 
-        order = 0;
       }
 
 
-      /* =========================
-         실제 엑셀의
-         샐러드 / 샌드위치 / 콤보 행
-         
-         첫 행에서 이미 Take Out 샐러드가
-         설정되었으므로 그대로 유지.
-      ========================= */
 
-      if (
-        meal === '중식' &&
-        sub === 'Take Out 샐러드' &&
-        (
-          cNorm === '샐러드' ||
-          cNorm === '샌드위치' ||
-          cNorm === '콤보'
-        )
-      ) {
+      /* ---------------------------------------------
+         날짜 열 찾기
+      --------------------------------------------- */
 
-        /* 소분류 유지 */
-      }
+      const header =
+        rows[1] || [];
 
 
-      /* =========================
-         석식 멀티바
-      ========================= */
+      const dateCols = [];
 
-      if (
-        meal === '석식' &&
-        normalizeSubText(b) === '멀티바'
-      ) {
-
-        sub = '석식 멀티바';
-
-        order = 0;
-      }
-
-
-      /* =========================
-         메뉴 저장
-      ========================= */
 
       for (
-        const [col, k] of dateCols
+        let c = 0;
+        c < header.length;
+        c++
       ) {
 
-        const value =
-          clean(rows[r]?.[col]);
+
+        const k =
+          dateKey(
+            header[c]
+          );
 
 
-        if (!value) continue;
+        if (
+          /^\d{4}-\d{2}-\d{2}$/
+            .test(k)
+        ) {
+
+          dateCols.push(
+            [c, k]
+          );
+
+        }
+
+      }
 
 
-        /*
-          소분류 이름 자체는 메뉴로 저장하지 않음.
-          
-          예:
-          멀티바
-          take·out 샐러드
-          
-          같은 셀은 실제 메뉴가 아니므로
-          메뉴 데이터에서 제외.
-        */
 
-        const bNorm2 = normalizeSubText(b);
+      if (
+        !dateCols.length
+      ) {
 
-        const isCategoryRow =
-          bNorm2 === '멀티바' ||
-          bNorm2.includes('take·out') ||
-          bNorm2.includes('take-out') ||
-          bNorm2.includes('take out') ||
-          bNorm2.includes('takeout');
+        throw new Error(
+          '2번째 행에서 날짜를 찾지 못했습니다.'
+        );
+
+      }
 
 
-        if (isCategoryRow) {
 
-          continue;
+      /* ---------------------------------------------
+         메뉴 분석
+      --------------------------------------------- */
+
+      parsed = [];
+
+
+      let meal = null;
+
+      let sub = null;
+
+      let order = 0;
+
+
+
+      for (
+        let r = 2;
+        r < rows.length;
+        r++
+      ) {
+
+
+        const row =
+          rows[r] || [];
+
+
+        const a =
+          clean(row[0]);
+
+
+        const b =
+          clean(row[1]);
+
+
+        const c =
+          clean(row[2]);
+
+
+        const text =
+          rowText(row);
+
+
+
+        /* -------------------------------------------
+           식사 시작
+        ------------------------------------------- */
+
+        if (
+          a === '조식' ||
+          a === '중식' ||
+          a === '석식'
+        ) {
+
+          meal =
+            a;
+
+          sub =
+            null;
+
+          order =
+            0;
+
         }
 
 
-        /*
-          중식의 샐러드/샌드위치/콤보 표시는
-          소분류이므로 메뉴 이름으로 사용하지 않음.
-        */
+
+        /* -------------------------------------------
+           원산지에서 종료
+        ------------------------------------------- */
+
+        if (
+
+          normalize(a)
+            .includes('원산지') ||
+
+          normalize(b)
+            .includes('원산지')
+
+        ) {
+
+          break;
+
+        }
+
+
+
+        if (!meal) {
+
+          continue;
+
+        }
+
+
+
+        /* =================================================
+           중식 멀티바
+        ================================================= */
 
         if (
           meal === '중식' &&
-          sub === 'Take Out 샐러드' &&
-          (
-            cNorm === '샐러드' ||
-            cNorm === '샌드위치' ||
-            cNorm === '콤보'
-          )
+          isMultiBar(row)
         ) {
 
-          continue;
+          sub =
+            '멀티바';
+
+          order =
+            0;
+
         }
 
 
-        parsed.push({
 
-          menu_date: k,
+        /* =================================================
+           중식 Take Out 샐러드
+        ================================================= */
 
-          meal_type: meal,
+        if (
+          meal === '중식' &&
+          isTakeOutSalad(row)
+        ) {
 
-          sub_type: sub,
+          sub =
+            'Take Out 샐러드';
 
-          menu_name: value,
+          order =
+            0;
 
-          sort_order: order++
+        }
+
+
+
+        /* =================================================
+           석식 멀티바
+           
+           석식 아래에서 '멀티바'가 나오면
+           자동으로 '석식 멀티바'
+        ================================================= */
+
+        if (
+          meal === '석식' &&
+          isMultiBar(row)
+        ) {
+
+          sub =
+            '석식 멀티바';
+
+          order =
+            0;
+
+        }
+
+
+
+        /* -------------------------------------------
+           카테고리 제목 자체는 메뉴로 저장하지 않음
+        ------------------------------------------- */
+
+        if (
+          isCategoryOnlyRow(row)
+        ) {
+
+          continue;
+
+        }
+
+
+
+        /* =================================================
+           각 날짜별 메뉴 저장
+        ================================================= */
+
+        for (
+          const [col, k]
+          of dateCols
+        ) {
+
+
+          const value =
+            clean(
+              row[col]
+            );
+
+
+          if (!value) {
+
+            continue;
+
+          }
+
+
+
+          parsed.push({
+
+            menu_date:
+              k,
+
+            meal_type:
+              meal,
+
+            sub_type:
+              sub,
+
+            menu_name:
+              value,
+
+            sort_order:
+              order++
+
+          });
+
+        }
+
+      }
+
+
+
+      /* ---------------------------------------------
+         메뉴가 하나도 없는 경우
+      --------------------------------------------- */
+
+      if (
+        !parsed.length
+      ) {
+
+        throw new Error(
+          '메뉴를 찾지 못했습니다. 엑셀 형식을 확인해주세요.'
+        );
+
+      }
+
+
+
+      /* =================================================
+         소분류 자동 정리
+         
+         Take Out 샐러드 아래에 있는
+         샐러드 / 샌드위치 / 콤보 행은
+         계속 Take Out 샐러드로 유지
+      ================================================= */
+
+      let currentMeal = null;
+
+      let currentSub = null;
+
+
+      parsed =
+        parsed.map(item => {
+
+
+          /*
+             기본적으로 이미 설정된
+             sub_type을 그대로 사용
+          */
+
+
+          return item;
 
         });
-      }
-    }
 
 
-    /* =========================
-       메뉴 확인
-    ========================= */
 
-    if (!parsed.length) {
+      /* =================================================
+         날짜 그룹
+      ================================================= */
 
-      throw new Error(
-        '메뉴를 찾지 못했습니다. 엑셀 형식을 확인해주세요.'
+      const grouped = {};
+
+
+      parsed.forEach(
+        x => {
+
+          (
+            grouped[
+              x.menu_date
+            ] ??= []
+          ).push(x);
+
+        }
       );
-    }
 
 
-    /* =========================
-       날짜별 그룹화
-    ========================= */
-
-    const grouped = {};
-
-
-    parsed.forEach(x => {
-
-      (grouped[x.menu_date] ??= [])
-        .push(x);
-
-    });
+      const dates =
+        Object.keys(
+          grouped
+        ).sort();
 
 
-    const dates =
-      Object.keys(grouped).sort();
+
+      /* =================================================
+         미리보기 화면
+      ================================================= */
+
+      $('preview')
+        .classList
+        .remove('hidden');
 
 
-    /* =========================
-       미리보기
-    ========================= */
+      $('preview').innerHTML =
 
-    $('preview').classList.remove(
-      'hidden'
-    );
+        '<table>' +
 
+        '<tr>' +
 
-    $('preview').innerHTML =
+        '<th>날짜</th>' +
 
-      '<table>' +
+        '<th>조식</th>' +
 
-      '<tr>' +
-      '<th>날짜</th>' +
-      '<th>조식</th>' +
-      '<th>중식</th>' +
-      '<th>석식</th>' +
-      '<th>총 메뉴</th>' +
-      '</tr>' +
+        '<th>중식</th>' +
 
-      dates.map(d => {
+        '<th>석식</th>' +
 
-        const list = grouped[d];
+        '<th>총 메뉴</th>' +
 
-        return `
+        '</tr>' +
 
-          <tr>
-
-            <td>${d}</td>
-
-            <td>
-              ${
-                list.filter(
-                  x => x.meal_type === '조식'
-                ).length
-              }
-            </td>
-
-            <td>
-              ${
-                list.filter(
-                  x => x.meal_type === '중식'
-                ).length
-              }
-            </td>
-
-            <td>
-              ${
-                list.filter(
-                  x => x.meal_type === '석식'
-                ).length
-              }
-            </td>
-
-            <td>${list.length}</td>
-
-          </tr>
-
-        `;
-
-      }).join('') +
-
-      '</table>';
+        dates
+          .map(d => {
 
 
-    $('status').textContent =
+            const list =
+              grouped[d];
 
-      `총 ${dates.length}일 / ${parsed.length}개 메뉴를 확인했습니다.
 
-하위 메뉴 자동 구분:
+            return `
 
-중식
-- 멀티바
-- Take Out 샐러드
+              <tr>
 
-석식
-- 석식 멀티바
+                <td>${d}</td>
+
+                <td>
+                  ${
+                    list.filter(
+                      x =>
+                        x.meal_type === '조식'
+                    ).length
+                  }
+                </td>
+
+                <td>
+                  ${
+                    list.filter(
+                      x =>
+                        x.meal_type === '중식'
+                    ).length
+                  }
+                </td>
+
+                <td>
+                  ${
+                    list.filter(
+                      x =>
+                        x.meal_type === '석식'
+                    ).length
+                  }
+                </td>
+
+                <td>
+                  ${list.length}
+                </td>
+
+              </tr>
+
+            `;
+
+          })
+          .join('') +
+
+        '</table>';
+
+
+
+      /* =================================================
+         소분류 확인 메시지
+      ================================================= */
+
+      const multiCount =
+        parsed.filter(
+          x =>
+            x.sub_type === '멀티바'
+        ).length;
+
+
+      const takeOutCount =
+        parsed.filter(
+          x =>
+            x.sub_type === 'Take Out 샐러드'
+        ).length;
+
+
+      const dinnerMultiCount =
+        parsed.filter(
+          x =>
+            x.sub_type === '석식 멀티바'
+        ).length;
+
+
+
+      $('status').textContent =
+
+        `총 ${dates.length}일 / ${parsed.length}개 메뉴를 확인했습니다.
+
+소분류 인식 결과
+
+🌿 중식 멀티바: ${multiCount}개
+
+🥗 Take Out 샐러드: ${takeOutCount}개
+
+🍵 석식 멀티바: ${dinnerMultiCount}개
 
 내용이 맞으면 "메뉴 업데이트"를 눌러주세요.`;
 
 
-    $('uploadBtn').disabled = false;
+
+      $('uploadBtn')
+        .disabled = false;
 
 
-  } catch (e) {
 
-    $('status').textContent =
-      '엑셀 분석 오류: ' + e.message;
-
-    $('uploadBtn').disabled = true;
-  }
-};
+    } catch (e) {
 
 
-/* =========================
-   메뉴 업데이트
-========================= */
-
-$('uploadBtn').onclick = async () => {
-
-  if (!parsed.length) return;
+      console.error(e);
 
 
-  $('uploadBtn').disabled = true;
-
-  $('status').textContent =
-    '기존 메뉴를 지우고 새 메뉴를 저장하는 중...';
-
-
-  try {
-
-    /* 엑셀에 포함된 날짜 */
-
-    const dates =
-      [
-        ...new Set(
-          parsed.map(x => x.menu_date)
-        )
-      ].sort();
+      $('status').textContent =
+        '엑셀 분석 오류: ' +
+        e.message;
 
 
-    /* 기존 메뉴 삭제 */
+      $('uploadBtn')
+        .disabled = true;
 
-    for (const d of dates) {
-
-      const { error } =
-        await sb
-          .from('menus')
-          .delete()
-          .eq('menu_date', d);
-
-
-      if (error) throw error;
     }
 
+  };
 
-    /* 새 메뉴 저장 */
 
-    for (
-      let i = 0;
-      i < parsed.length;
-      i += 500
+
+/* =====================================================
+   메뉴 업데이트
+===================================================== */
+
+$('uploadBtn').onclick =
+  async () => {
+
+
+    if (
+      !parsed.length
     ) {
 
-      const { error } =
-        await sb
-          .from('menus')
-          .insert(
-            parsed.slice(i, i + 500)
-          );
+      return;
 
-
-      if (error) throw error;
     }
 
 
-    /* 완료 */
+    $('uploadBtn')
+      .disabled = true;
+
 
     $('status').textContent =
+      '기존 메뉴를 지우고 새 메뉴를 저장하는 중...';
 
-      `✅ 업데이트 완료!
+
+
+    try {
+
+
+      /* ---------------------------------------------
+         엑셀에 들어있는 날짜
+      --------------------------------------------- */
+
+      const dates =
+        [
+          ...new Set(
+            parsed.map(
+              x =>
+                x.menu_date
+            )
+          )
+        ].sort();
+
+
+
+      /* ---------------------------------------------
+         기존 메뉴 삭제
+      --------------------------------------------- */
+
+      for (
+        const d of dates
+      ) {
+
+
+        const {
+          error
+        } =
+          await sb
+            .from('menus')
+            .delete()
+            .eq(
+              'menu_date',
+              d
+            );
+
+
+        if (error) {
+
+          throw error;
+
+        }
+
+      }
+
+
+
+      /* ---------------------------------------------
+         새 메뉴 저장
+      --------------------------------------------- */
+
+      for (
+        let i = 0;
+        i < parsed.length;
+        i += 500
+      ) {
+
+
+        const {
+          error
+        } =
+          await sb
+            .from('menus')
+            .insert(
+              parsed.slice(
+                i,
+                i + 500
+              )
+            );
+
+
+        if (error) {
+
+          throw error;
+
+        }
+
+      }
+
+
+
+      /* ---------------------------------------------
+         완료
+      --------------------------------------------- */
+
+      $('status').textContent =
+
+        `✅ 업데이트 완료!
 
 ${dates[0]} ~ ${dates[dates.length - 1]}
 
@@ -769,23 +1242,37 @@ ${dates[0]} ~ ${dates[dates.length - 1]}
 
 일반 메뉴 페이지를 새로고침하면 반영됩니다.`;
 
-  } catch (e) {
-
-    $('status').textContent =
-      '저장 오류: ' + e.message;
-
-    $('uploadBtn').disabled = false;
-  }
-};
 
 
-/* =========================
+    } catch (e) {
+
+
+      console.error(e);
+
+
+      $('status').textContent =
+        '저장 오류: ' +
+        e.message;
+
+
+      $('uploadBtn')
+        .disabled = false;
+
+    }
+
+  };
+
+
+
+/* =====================================================
    최초 실행
-========================= */
+===================================================== */
 
 refresh();
 
 </script>
 
+
 </body>
+
 </html>
