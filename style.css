@@ -28,17 +28,7 @@ input[type=file]{width:100%;padding:13px;border:1px dashed #d8c8bb;border-radius
 .status{margin-top:12px;padding:12px;border-radius:12px;background:#f8f5f2;white-space:pre-wrap;font-size:13px}
 .preview{margin-top:14px;overflow:auto;border:1px solid var(--line);border-radius:14px}.preview table{width:100%;border-collapse:collapse;font-size:13px}.preview th,.preview td{padding:8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 .hidden{display:none}
-/* 메인 메뉴 강조 */
-.main-menu {
-  font-weight: 800;
-  font-size: 1.12em;
-  background: #fff3e8;
-  border: 2px solid #f3a078;
-  color: #7a3e20;
-  border-radius: 14px;
-  padding: 14px 16px;
-  margin-bottom: 8px;
-}
+
 /* 메인 메뉴 강조 */
 .main-menu {
   font-weight: 800;
