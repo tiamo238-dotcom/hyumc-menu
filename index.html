@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>오늘의 메뉴</title><link rel="stylesheet" href="style.css"></head>
+<body><div class="wrap">
+<section class="hero">
+  <div class="logo">🍽️</div><div class="title">오늘의 메뉴</div>
+  <div class="subtitle">맛있는 식사시간 되세요 🌷</div>
+  <div class="datebar"><button id="prev">‹</button><select id="dateSelect"></select><button id="next">›</button></div>
+  <button class="todaybtn" id="todayBtn">오늘 메뉴로 돌아가기</button>
+</section>
+<div id="menus"></div>
+<div class="notice">※ 식자재 수급에 따라 메뉴가 변경될 수 있습니다.<br>※ 알레르기 주의 메뉴가 있으니 게시된 알레르기 정보를 확인해 주세요.</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script>
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const dateSelect=document.getElementById('dateSelect'), menusEl=document.getElementById('menus');
+const prev=document.getElementById('prev'), next=document.getElementById('next'), todayBtn=document.getElementById('todayBtn');
+let dates=[], currentIndex=0;
+const groups=[
+  {name:'조식',icon:'🌅',children:['조식']},
+  {name:'중식',icon:'🍱',children:['중식','멀티바','샐러드','샌드위치','콤보']},
+  {name:'석식',icon:'🌙',children:['석식','석식 멀티바']}
+];
+const icons={조식:'🌅',중식:'🍱',멀티바:'🌿',샐러드:'🥗',샌드위치:'🥪',콤보:'🍙',석식:'🌙','석식 멀티바':'🍵'};
+function fmt(k){const d=new Date(k+'T00:00:00');return `${d.getMonth()+1}월 ${d.getDate()}일 (${['일','월','화','수','목','금','토'][d.getDay()]})`}
+async function loadDates(){
+  const {data,error}=await sb.from('menus').select('menu_date').order('menu_date',{ascending:true});
+  if(error) throw error;
+  dates=[...new Set((data||[]).map(x=>x.menu_date))];
+  if(!dates.length){menusEl.innerHTML='<div class="card">등록된 메뉴가 없습니다.</div>';return}
+  dateSelect.innerHTML=dates.map((d,i)=>`<option value="${d}">${fmt(d)}</option>`).join('');
+  const today=new Date().toISOString().slice(0,10);
+  currentIndex=dates.indexOf(today); if(currentIndex<0) currentIndex=dates.length-1;
+  showDate();
+}
+async function showDate(){
+  const date=dates[currentIndex]; dateSelect.value=date; prev.disabled=currentIndex<=0; next.disabled=currentIndex>=dates.length-1;
+  const {data,error}=await sb.from('menus').select('*').eq('menu_date',date).order('sort_order').order('id');
+  if(error){menusEl.innerHTML=`<div class="card">메뉴를 불러오지 못했습니다.<br>${error.message}</div>`;return}
+  const by={}; (data||[]).forEach(r=>(by[r.meal_type]??=[]).push(r));
+  menusEl.innerHTML='';
+  groups.forEach(g=>{
+    if(!by[g.name] && !g.children.some(x=>by[x])) return;
+    const card=document.createElement('section'); card.className='card';
+    card.innerHTML=`<div class="card-head"><span class="card-icon">${g.icon}</span><span class="card-title">${g.name}</span><span class="card-sub">${fmt(date)}</span></div>`;
+    g.children.forEach((sub,idx)=>{
+      if(!by[sub]?.length) return;
+      if(sub!==g.name){const h=document.createElement('div');h.className='subhead';h.textContent=icons[sub]+' '+sub;card.appendChild(h)}
+      by[sub].forEach(r=>{const p=document.createElement('div');p.className='menu-item';p.innerHTML=r.menu_name.replace(/\n/g,'<br>');card.appendChild(p)})
+    });
+    menusEl.appendChild(card);
+  });
+}
+dateSelect.onchange=()=>{currentIndex=dates.indexOf(dateSelect.value);showDate()}
+prev.onclick=()=>{if(currentIndex>0){currentIndex--;showDate()}}
+next.onclick=()=>{if(currentIndex<dates.length-1){currentIndex++;showDate()}}
+todayBtn.onclick=()=>{const t=new Date().toISOString().slice(0,10),i=dates.indexOf(t);currentIndex=i>=0?i:dates.length-1;showDate()}
+loadDates().catch(e=>menusEl.innerHTML=`<div class="card">Supabase 연결을 확인해주세요.<br>${e.message}</div>`);
+</script></body></html>
