@@ -81,21 +81,12 @@
 
 <script>
 
-
-/* =========================
-   Supabase 연결
-========================= */
-
 const sb =
   supabase.createClient(
     SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY
   );
 
-
-/* =========================
-   화면 요소
-========================= */
 
 const dateSelect =
   document.getElementById('dateSelect');
@@ -128,7 +119,10 @@ const groups = [
     name: '조식',
     icon: '🌅',
     children: [
-      '조식'
+      {
+        name: '조식',
+        icon: '🌅'
+      }
     ]
   },
 
@@ -136,9 +130,18 @@ const groups = [
     name: '중식',
     icon: '🍱',
     children: [
-      '중식',
-      '멀티바',
-      'Take Out 샐러드'
+      {
+        name: '중식',
+        icon: '🍱'
+      },
+      {
+        name: '멀티바',
+        icon: '🌿'
+      },
+      {
+        name: 'Take Out 샐러드',
+        icon: '🥗'
+      }
     ]
   },
 
@@ -146,8 +149,14 @@ const groups = [
     name: '석식',
     icon: '🌙',
     children: [
-      '석식',
-      '석식 멀티바'
+      {
+        name: '석식',
+        icon: '🌙'
+      },
+      {
+        name: '석식 멀티바',
+        icon: '🍵'
+      }
     ]
   }
 
@@ -155,29 +164,7 @@ const groups = [
 
 
 /* =========================
-   소분류 아이콘
-========================= */
-
-const icons = {
-
-  조식: '🌅',
-
-  중식: '🍱',
-
-  멀티바: '🌿',
-
-  'Take Out 샐러드': '🥗',
-
-  석식: '🌙',
-
-  '석식 멀티바': '🍵'
-
-};
-
-
-/* =========================
    날짜 표시
-   UTC 사용 안 함
 ========================= */
 
 function fmt(k) {
@@ -187,7 +174,6 @@ function fmt(k) {
 
 
   if (parts.length !== 3) {
-
     return k;
   }
 
@@ -201,12 +187,6 @@ function fmt(k) {
   const day =
     Number(parts[2]);
 
-
-  /*
-    요일 계산만 Date 객체 사용.
-    시간은 사용하지 않으므로
-    UTC 날짜 밀림 문제가 없음.
-  */
 
   const d =
     new Date(
@@ -233,7 +213,7 @@ function fmt(k) {
 
 /* =========================
    오늘 날짜
-   한국 PC 시간 기준
+   한국 시간 기준
 ========================= */
 
 function getTodayKey() {
@@ -261,7 +241,7 @@ function getTodayKey() {
 
 
 /* =========================
-   날짜 목록 불러오기
+   날짜 목록
 ========================= */
 
 async function loadDates() {
@@ -281,7 +261,6 @@ async function loadDates() {
 
 
   if (error) {
-
     throw error;
   }
 
@@ -304,8 +283,6 @@ async function loadDates() {
   }
 
 
-  /* 날짜 선택 메뉴 */
-
   dateSelect.innerHTML =
 
     dates
@@ -318,8 +295,6 @@ async function loadDates() {
       .join('');
 
 
-  /* 오늘 날짜 선택 */
-
   const today =
     getTodayKey();
 
@@ -327,11 +302,6 @@ async function loadDates() {
   currentIndex =
     dates.indexOf(today);
 
-
-  /*
-    오늘 날짜가 메뉴에 없으면
-    가장 최근 날짜 선택
-  */
 
   if (currentIndex < 0) {
 
@@ -345,7 +315,7 @@ async function loadDates() {
 
 
 /* =========================
-   선택된 날짜의 메뉴 표시
+   선택 날짜 메뉴 표시
 ========================= */
 
 async function showDate() {
@@ -398,18 +368,32 @@ async function showDate() {
   }
 
 
-  /* =========================
-     식사별 메뉴 그룹
-  ========================= */
+  /*
+   * 중요!
+   *
+   * meal_type과 sub_type을
+   * 둘 다 사용해서 메뉴를 분류합니다.
+   *
+   * 예:
+   *
+   * meal_type = 중식
+   * sub_type  = 멀티바
+   *
+   * meal_type = 중식
+   * sub_type  = Take Out 샐러드
+   */
 
-  const by = {};
+
+  const byMeal = {};
 
 
   (data || []).forEach(r => {
 
-    (
-      by[r.meal_type] ??= []
-    ).push(r);
+    if (!byMeal[r.meal_type]) {
+      byMeal[r.meal_type] = [];
+    }
+
+    byMeal[r.meal_type].push(r);
 
   });
 
@@ -418,50 +402,43 @@ async function showDate() {
 
 
   /* =========================
-     조식 / 중식 / 석식 표시
+     조식 / 중식 / 석식
   ========================= */
 
-  groups.forEach(g => {
+  groups.forEach(group => {
 
 
-    /*
-      해당 그룹에 메뉴가 하나도 없으면
-      표시하지 않음
-    */
+    const mealRows =
+      byMeal[group.name] || [];
 
-    if (
-      !by[g.name] &&
-      !g.children.some(
-        x => by[x]
-      )
-    ) {
 
+    if (!mealRows.length) {
       return;
     }
 
 
     const card =
-      document.createElement(
-        'section'
-      );
+      document.createElement('section');
 
 
     card.className =
       'card';
 
 
-    /* 그룹 제목 */
+    /* =========================
+       식사 제목
+    ========================= */
 
     card.innerHTML = `
 
       <div class="card-head">
 
         <span class="card-icon">
-          ${g.icon}
+          ${group.icon}
         </span>
 
         <span class="card-title">
-          ${g.name}
+          ${group.name}
         </span>
 
         <span class="card-sub">
@@ -474,34 +451,70 @@ async function showDate() {
 
 
     /* =========================
-       소분류별 메뉴
+       소분류별 표시
     ========================= */
 
-    g.children.forEach(
-      sub => {
+    group.children.forEach(
+      child => {
 
+
+        let rows = [];
+
+
+        /*
+         * 일반 조식 / 중식 / 석식
+         *
+         * sub_type이 비어 있는 메뉴
+         */
 
         if (
-          !by[sub]?.length
+          child.name === group.name
         ) {
 
-          return;
+          rows =
+            mealRows.filter(
+              r =>
+                !r.sub_type ||
+                String(r.sub_type).trim() === ''
+            );
+
         }
 
 
         /*
-          조식 / 중식 / 석식 자체가 아닌
-          하위 메뉴인 경우 소제목 표시
-        */
+         * 소분류 메뉴
+         *
+         * sub_type이 해당 이름인 메뉴
+         */
+
+        else {
+
+          rows =
+            mealRows.filter(
+              r =>
+                String(
+                  r.sub_type || ''
+                ).trim() === child.name
+            );
+
+        }
+
+
+        if (!rows.length) {
+          return;
+        }
+
+
+        /* =========================
+           소분류 제목
+        ========================= */
 
         if (
-          sub !== g.name
+          child.name !== group.name
         ) {
 
           const h =
-            document.createElement(
-              'div'
-            );
+            document.createElement('div');
 
 
           h.className =
@@ -509,24 +522,24 @@ async function showDate() {
 
 
           h.textContent =
-            icons[sub] +
+            child.icon +
             ' ' +
-            sub;
+            child.name;
 
 
           card.appendChild(h);
         }
 
 
-        /* 메뉴 표시 */
+        /* =========================
+           메뉴 출력
+        ========================= */
 
-        by[sub].forEach(
+        rows.forEach(
           r => {
 
             const p =
-              document.createElement(
-                'div'
-              );
+              document.createElement('div');
 
 
             p.className =
@@ -633,7 +646,7 @@ todayBtn.onclick = () => {
 
 
 /* =========================
-   최초 실행
+   시작
 ========================= */
 
 loadDates()
