@@ -832,103 +832,114 @@ $('previewBtn').disabled=false;
 $('uploadBtn').onclick =
 async()=>{
 
-if(!parsed.length){
+  if(!parsed.length){
 
-return;
+    return;
 
-}
-
-
-$('uploadBtn').disabled=true;
-
-$('status').textContent =
-'기존 메뉴를 지우고 새 메뉴를 저장하는 중입니다...';
+  }
 
 
-try{
+  $('uploadBtn').disabled=true;
 
-const dates=[
-...new Set(
-parsed.map(
-x=>x.menu_date
-)
-)
-].sort();
+  $('status').textContent =
+    '기존 메뉴를 모두 지우고 새 메뉴를 저장하는 중입니다...';
 
 
-/* 기존 날짜 삭제 */
+  try{
 
-for(
-const d of dates
-){
-
-const {error}=
-await sb
-.from('menus')
-.delete()
-.eq(
-'menu_date',
-d
-);
-
-if(error){
-
-throw error;
-
-}
-
-}
+    const dates=[
+      ...new Set(
+        parsed.map(
+          x=>x.menu_date
+        )
+      )
+    ].sort();
 
 
-/* 새 메뉴 저장 */
+    /* =====================================================
+       ★ 기존 메뉴 전체 삭제
 
-for(
-let i=0;
-i<parsed.length;
-i+=500
-){
+       기존에는 새 엑셀에 포함된 날짜만 삭제했기 때문에
+       예전에 업로드했던 날짜의 메뉴가 남아 있었습니다.
 
-const {error}=
-await sb
-.from('menus')
-.insert(
-parsed.slice(i,i+500)
-);
+       이제 새 엑셀을 업데이트할 때
+       menus 테이블의 기존 메뉴를 모두 삭제합니다.
+    ===================================================== */
 
-if(error){
-
-throw error;
-
-}
-
-}
+    const {error: deleteError} =
+      await sb
+      .from('menus')
+      .delete()
+      .not('menu_date','is',null);
 
 
-$('status').innerHTML=
+    if(deleteError){
 
-`✅ <b>업데이트 완료!</b>
+      throw deleteError;
 
-<br><br>
+    }
 
-${dates[0]} ~ ${dates[dates.length-1]}
 
-<br>
+    /* =====================================================
+       새 메뉴 저장
+    ===================================================== */
 
-총 ${dates.length}일 /
-${parsed.length}개 메뉴가 저장되었습니다.
+    for(
+      let i=0;
+      i<parsed.length;
+      i+=500
+    ){
 
-<br><br>
+      const {error} =
+        await sb
+        .from('menus')
+        .insert(
+          parsed.slice(i,i+500)
+        );
 
-일반 메뉴 페이지를 새로고침하면 반영됩니다.`;
 
-}catch(e){
+      if(error){
 
-$('status').textContent=
-'저장 오류: '+e.message;
+        throw error;
 
-$('uploadBtn').disabled=false;
+      }
 
-}
+    }
+
+
+    $('status').innerHTML=
+
+      `✅ <b>업데이트 완료!</b>
+
+      <br><br>
+
+      ${dates[0]} ~ ${dates[dates.length-1]}
+
+      <br>
+
+      총 ${dates.length}일 /
+      ${parsed.length}개 메뉴가 저장되었습니다.
+
+      <br><br>
+
+      기존 메뉴는 삭제되고
+      새로 업로드한 2개 엑셀의 메뉴만 저장되었습니다.
+
+      <br><br>
+
+      일반 메뉴 페이지를 새로고침하면 반영됩니다.`;
+
+
+  }catch(e){
+
+    console.error(e);
+
+    $('status').textContent=
+      '저장 오류: '+e.message;
+
+    $('uploadBtn').disabled=false;
+
+  }
 
 };
 
