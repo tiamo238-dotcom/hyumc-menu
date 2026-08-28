@@ -338,6 +338,39 @@ function extractTime(v){
 }
 
 
+/*
+  주말(토/일) 여부 판별
+
+  UTC 기준으로 계산하여
+  한국에서 요일이 밀리는 문제를 방지
+*/
+
+function isWeekend(k){
+
+  const m=
+    String(k).match(
+      /^(\d{4})-(\d{2})-(\d{2})$/
+    );
+
+
+  if(!m) return false;
+
+
+  const wd=
+    new Date(
+      Date.UTC(
+        Number(m[1]),
+        Number(m[2])-1,
+        Number(m[3])
+      )
+    ).getUTCDay();
+
+
+  return wd===0 || wd===6;
+
+}
+
+
 /* 식단 분류 찾기 */
 
 function detectCategory(meal,a,b){
@@ -715,8 +748,6 @@ async function parseFile(file){
         extractTime(a)||
         extractTime(b);
 
-      order=0;
-
     }
 
 
@@ -736,9 +767,36 @@ async function parseFile(file){
         clean(rows[r]?.[col]);
 
 
-      if(!value || value==='**'){
+      if(
+        !value ||
+        value==='**' ||
+        value.includes('미운영')
+      ){
 
         continue;
+
+      }
+
+
+      /*
+        주말 중식은 '오늘은 집밥' / '오늘은 일품'
+        구분 없이 단일메뉴로 운영되므로
+        하나의 분류로 합쳐서 저장
+      */
+
+      let finalSub=sub;
+
+
+      if(
+        meal==='중식' &&
+        isWeekend(k) &&
+        (
+          sub==='오늘은 집밥' ||
+          sub==='오늘은 일품'
+        )
+      ){
+
+        finalSub='오늘은 집밥';
 
       }
 
@@ -749,7 +807,7 @@ async function parseFile(file){
 
         meal_type:meal,
 
-        sub_type:sub,
+        sub_type:finalSub,
 
         sub_time:subTime,
 
