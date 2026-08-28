@@ -1,54 +1,24 @@
 <!doctype html>
 <html lang="ko">
-
 <head>
-
 <meta charset="utf-8">
-
-<meta
-  name="viewport"
-  content="width=device-width,initial-scale=1"
->
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>식단 관리자</title>
-
-<link
-  rel="stylesheet"
-  href="style.css"
->
-
+<link rel="stylesheet" href="style.css">
 </head>
-
 
 <body>
 
 <div class="admin-wrap">
 
-
 <section class="hero">
-
   <div class="logo">👩‍🍳</div>
-
-  <div class="title">
-    식단 관리자
-  </div>
-
-  <div class="subtitle">
-    엑셀파일을 올리면 메뉴가 업데이트됩니다.
-  </div>
-
+  <div class="title">식단 관리자</div>
+  <div class="subtitle">엑셀파일을 올리면 메뉴가 업데이트됩니다.</div>
 </section>
 
-
-
-<!-- =========================
-     로그인
-========================= -->
-
-<section
-  id="loginCard"
-  class="admin-card"
->
+<!-- 로그인 -->
+<section id="loginCard" class="admin-card">
 
   <h2>🔐 관리자 로그인</h2>
 
@@ -56,60 +26,29 @@
     관리자 계정으로 로그인해야 메뉴를 수정할 수 있습니다.
   </p>
 
-
   <input
     id="email"
     type="email"
     placeholder="관리자 이메일"
-    style="
-      width:100%;
-      padding:12px;
-      border:1px solid #ddd;
-      border-radius:12px;
-      margin-top:10px;
-    "
+    style="width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;margin-top:10px"
   >
-
 
   <input
     id="password"
     type="password"
     placeholder="비밀번호"
-    style="
-      width:100%;
-      padding:12px;
-      border:1px solid #ddd;
-      border-radius:12px;
-      margin-top:8px;
-    "
+    style="width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;margin-top:8px"
   >
 
+  <button class="action" id="loginBtn">로그인</button>
 
-  <button
-    class="action"
-    id="loginBtn"
-  >
-    로그인
-  </button>
-
-
-  <div
-    id="loginStatus"
-    class="status"
-  ></div>
+  <div id="loginStatus" class="status"></div>
 
 </section>
 
 
-
-<!-- =========================
-     업로드
-========================= -->
-
-<section
-  id="uploadCard"
-  class="admin-card hidden"
->
+<!-- 업로드 -->
+<section id="uploadCard" class="admin-card hidden">
 
   <h2>📁 새 식단 업로드</h2>
 
@@ -118,25 +57,16 @@
   </p>
 
 
+  <!-- 1주차 -->
+  <div style="
+    margin-top:15px;
+    padding:14px;
+    border:1px solid #eadfd8;
+    border-radius:15px;
+    background:#fffaf7;
+  ">
 
-  <div
-    style="
-      margin-top:15px;
-      padding:15px;
-      background:#fffaf6;
-      border:1px solid #eadfd8;
-      border-radius:14px;
-    "
-  >
-
-    <div
-      style="
-        font-weight:700;
-        margin-bottom:8px;
-      "
-    >
-      📅 1주차 식단
-    </div>
+    <h3 style="margin:0 0 10px 0;">📅 1주차 식단</h3>
 
     <input
       id="file1"
@@ -147,25 +77,16 @@
   </div>
 
 
+  <!-- 2주차 -->
+  <div style="
+    margin-top:12px;
+    padding:14px;
+    border:1px solid #eadfd8;
+    border-radius:15px;
+    background:#fffaf7;
+  ">
 
-  <div
-    style="
-      margin-top:12px;
-      padding:15px;
-      background:#fffaf6;
-      border:1px solid #eadfd8;
-      border-radius:14px;
-    "
-  >
-
-    <div
-      style="
-        font-weight:700;
-        margin-bottom:8px;
-      "
-    >
-      📅 2주차 식단
-    </div>
+    <h3 style="margin:0 0 10px 0;">📅 2주차 식단</h3>
 
     <input
       id="file2"
@@ -176,19 +97,16 @@
   </div>
 
 
-
   <button
     class="action secondary"
     id="previewBtn"
+    style="margin-top:15px;"
   >
     1. 엑셀 미리보기
   </button>
 
 
-  <div
-    id="preview"
-    class="preview hidden"
-  ></div>
+  <div id="preview" class="preview hidden"></div>
 
 
   <button
@@ -200,10 +118,7 @@
   </button>
 
 
-  <div
-    id="status"
-    class="status"
-  ></div>
+  <div id="status" class="status"></div>
 
 
   <button
@@ -218,100 +133,75 @@
 </div>
 
 
-
+<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<!-- XLSX -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
+<!-- 설정 -->
 <script src="js/config.js"></script>
-
 
 
 <script>
 
-/* =====================================================
-   Supabase
-===================================================== */
+const sb = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
 
-const sb =
-  supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY
-  );
-
-
-const $ =
-  id => document.getElementById(id);
-
+const $ = id => document.getElementById(id);
 
 let parsed = [];
 
 
-
-/* =====================================================
-   로그인 상태
-===================================================== */
+/* =========================================================
+   로그인 상태 확인
+========================================================= */
 
 async function refresh(){
 
-  const { data, error } =
-    await sb.auth.getSession();
-
+  const {data,error} = await sb.auth.getSession();
 
   if(error){
 
-    $('loginStatus').textContent =
-      error.message;
+    $('loginStatus').textContent = error.message;
 
     return;
-
   }
 
+  const logged = !!data.session;
 
-  const logged =
-    !!data.session;
+  $('loginCard').classList.toggle(
+    'hidden',
+    logged
+  );
 
-
-  $('loginCard')
-    .classList
-    .toggle(
-      'hidden',
-      logged
-    );
-
-
-  $('uploadCard')
-    .classList
-    .toggle(
-      'hidden',
-      !logged
-    );
-
+  $('uploadCard').classList.toggle(
+    'hidden',
+    !logged
+  );
 }
 
 
-sb.auth.onAuthStateChange(
-  () => refresh()
-);
+sb.auth.onAuthStateChange(() => {
+
+  refresh();
+
+});
 
 
-
-/* =====================================================
+/* =========================================================
    로그인
-===================================================== */
+========================================================= */
 
-$('loginBtn').onclick =
-async()=>{
+$('loginBtn').onclick = async () => {
 
   const email =
-    $('email')
-      .value
-      .trim();
-
+    $('email').value.trim();
 
   const password =
-    $('password')
-      .value;
+    $('password').value;
 
 
   if(!email || !password){
@@ -320,19 +210,16 @@ async()=>{
       '이메일과 비밀번호를 입력하세요.';
 
     return;
-
   }
 
 
-  $('loginBtn').disabled =
-    true;
-
+  $('loginBtn').disabled = true;
 
   $('loginStatus').textContent =
     '로그인 중...';
 
 
-  const { error } =
+  const {error} =
     await sb.auth.signInWithPassword({
       email,
       password
@@ -345,22 +232,18 @@ async()=>{
       : '로그인 성공!';
 
 
-  $('loginBtn').disabled =
-    false;
-
+  $('loginBtn').disabled = false;
 
   await refresh();
 
 };
 
 
-
-/* =====================================================
+/* =========================================================
    로그아웃
-===================================================== */
+========================================================= */
 
-$('logoutBtn').onclick =
-async()=>{
+$('logoutBtn').onclick = async () => {
 
   await sb.auth.signOut();
 
@@ -369,66 +252,108 @@ async()=>{
 };
 
 
+/* =========================================================
+   문자열 정리
+========================================================= */
 
-/* =====================================================
+function clean(v){
+
+  if(v === null || v === undefined){
+
+    return '';
+
+  }
+
+  return String(v)
+    .replace(/\r/g,'')
+    .trim();
+
+}
+
+
+/* =========================================================
+   비교용 문자열
+   줄바꿈 / 공백 제거
+========================================================= */
+
+function compact(v){
+
+  return clean(v)
+    .replace(/\s+/g,'')
+    .replace(/·/g,'/')
+    .toLowerCase();
+
+}
+
+
+/* =========================================================
    날짜 변환
-   ★ Date 객체를 사용하지 않음
-   ★ 날짜 하루 밀림 방지
-===================================================== */
+========================================================= */
 
 function dateKey(v){
 
-  /* 엑셀 날짜 숫자 */
+  if(v === null || v === undefined || v === ''){
+
+    return '';
+
+  }
+
+
+  /* Date 객체 */
+
+  if(v instanceof Date && !isNaN(v.getTime())){
+
+    return [
+      v.getFullYear(),
+      String(v.getMonth()+1).padStart(2,'0'),
+      String(v.getDate()).padStart(2,'0')
+    ].join('-');
+
+  }
+
+
+  /* Excel 숫자 날짜 */
 
   if(typeof v === 'number'){
 
-    const d =
-      XLSX.SSF.parse_date_code(v);
+    try{
 
+      const d =
+        XLSX.SSF.parse_date_code(v);
 
-    if(d){
+      if(d){
 
-      return (
-        String(d.y).padStart(4,'0') +
-        '-' +
-        String(d.m).padStart(2,'0') +
-        '-' +
-        String(d.d).padStart(2,'0')
-      );
+        return [
+          d.y,
+          String(d.m).padStart(2,'0'),
+          String(d.d).padStart(2,'0')
+        ].join('-');
+
+      }
+
+    }catch(e){
+
+      return '';
 
     }
 
   }
 
 
-  const s =
-    String(v ?? '').trim();
+  const s = clean(v);
 
 
-  if(
-    /^\d{4}-\d{2}-\d{2}$/.test(s)
-  ){
+  /* yyyy-mm-dd */
 
-    return s;
+  if(/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)){
 
-  }
+    const p = s.split('-');
 
-
-  const m =
-    s.match(
-      /^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/
-    );
-
-
-  if(m){
-
-    return (
-      m[1] +
-      '-' +
-      String(m[2]).padStart(2,'0') +
-      '-' +
-      String(m[3]).padStart(2,'0')
-    );
+    return [
+      p[0],
+      String(p[1]).padStart(2,'0'),
+      String(p[2]).padStart(2,'0')
+    ].join('-');
 
   }
 
@@ -438,845 +363,140 @@ function dateKey(v){
 }
 
 
+/* =========================================================
+   분류 판별
+========================================================= */
 
-/* =====================================================
-   문자열 정리
-===================================================== */
+function detectCategory(meal, a, b){
 
-function clean(v){
+  const A = compact(a);
+  const B = compact(b);
 
-  return String(v ?? '')
-    .replace(/\r/g,'')
-    .replace(/\t/g,'')
-    .trim();
+
+  /* -------------------------
+     조식
+  ------------------------- */
+
+  if(meal === '조식'){
+
+    if(
+      B.includes('활기찬아침')
+    ){
+
+      return '활기찬아침';
+
+    }
+
+
+    if(
+      B.includes('plus코너')
+    ){
+
+      return 'PLUS코너';
+
+    }
+
+
+    if(
+      A.includes('t/o간편식') ||
+      A.includes('to간편식')
+    ){
+
+      return 'T/O간편식';
+
+    }
+
+  }
+
+
+  /* -------------------------
+     중식
+  ------------------------- */
+
+  if(meal === '중식'){
+
+    if(
+      B.includes('오늘은집밥')
+    ){
+
+      return '오늘은집밥';
+
+    }
+
+
+    if(
+      B.includes('오늘은일품')
+    ){
+
+      return '오늘은일품';
+
+    }
+
+
+    if(
+      B.includes('멀티바')
+    ){
+
+      return '멀티바';
+
+    }
+
+
+    if(
+      A.includes('t/o샐러드') ||
+      A.includes('to샐러드')
+    ){
+
+      return 'T/O샐러드(예약제)';
+
+    }
+
+  }
+
+
+  /* -------------------------
+     석식
+  ------------------------- */
+
+  if(meal === '석식'){
+
+    if(
+      B.includes('건강한저녁')
+    ){
+
+      return '건강한저녁';
+
+    }
+
+
+    if(
+      B.includes('샐러드뷔페')
+    ){
+
+      return '샐러드뷔페';
+
+    }
+
+
+    if(
+      B.includes('멀티바')
+    ){
+
+      return '멀티바';
+
+    }
+
+  }
+
+
+  return '';
 
 }
 
 
-
-/* =====================================================
-   비교용 문자열
-===================================================== */
-
-function norm(v){
-
-  return clean(v)
-    .toLowerCase()
-    .replace(/\s+/g,'')
-    .replace(/[·•ㆍ]/g,'')
-    .replace(/[()（）]/g,'')
-    .replace(/[-_]/g,'');
-
-}
-
-
-
-/* =====================================================
-   새 양식 분류 이름
-===================================================== */
-
-function categoryName(v){
-
-  const n =
-    norm(v);
-
-
-  /* 조식 */
-
-  if(
-    n.includes('활기찬아침')
-  ){
-
-    return '활기찬 아침';
-
-  }
-
-
-  if(
-    n.includes('to간편식') ||
-    n.includes('t/o간편식')
-  ){
-
-    return 'T/O 간편식';
-
-  }
-
-
-  if(
-    n.includes('plus코너') ||
-    n.includes('plus')
-  ){
-
-    return 'PLUS 코너';
-
-  }
-
-
-  /* 중식 */
-
-  if(
-    n.includes('오늘은집밥')
-  ){
-
-    return '오늘은 집밥';
-
-  }
-
-
-  if(
-    n.includes('오늘은일품')
-  ){
-
-    return '오늘은 일품';
-
-  }
-
-
-  if(
-    n.includes('to샐러드') ||
-    n.includes('tosalad')
-  ){
-
-    return 'T/O 샐러드(예약제)';
-
-  }
-
-
-  /* 석식 */
-
-  if(
-    n.includes('건강한저녁')
-  ){
-
-    return '건강한 저녁';
-
-  }
-
-
-  if(
-    n.includes('샐러드뷔페')
-  ){
-
-    return '샐러드 뷔페';
-
-  }
-
-
-  if(
-    n === '멀티바' ||
-    n.includes('멀티바')
-  ){
-
-    return '멀티바';
-
-  }
-
-
-  if(
-    n.includes('샐러드')
-  ){
-
-    return '샐러드';
-
-  }
-
-
-  if(
-    n.includes('샌드위치')
-  ){
-
-    return '샌드위치';
-
-  }
-
-
-  if(
-    n.includes('콤보')
-  ){
-
-    return '콤보';
-
-  }
-
-
-  return clean(v);
-
-}
-
-
-
-/* =====================================================
-   새 양식인지 확인
-===================================================== */
-
-function isNewFormat(rows){
-
-  let text='';
-
-
-  for(
-    let r=0;
-    r<Math.min(rows.length,45);
-    r++
-  ){
-
-    for(
-      let c=0;
-      c<Math.min(rows[r]?.length || 0,8);
-      c++
-    ){
-
-      text +=
-        ' ' +
-        clean(rows[r]?.[c]);
-
-    }
-
-  }
-
-
-  const n =
-    norm(text);
-
-
-  return (
-    n.includes('활기찬아침') &&
-    n.includes('오늘은집밥') &&
-    n.includes('오늘은일품') &&
-    n.includes('건강한저녁')
-  );
-
-}
-
-
-
-/* =====================================================
-   새 양식 분석
-===================================================== */
-
-function parseNewFormat(rows,dateCols){
-
-  const result=[];
-
-  let meal=null;
-
-  let category=null;
-
-  let categoryType=null;
-
-  let order=0;
-
-
-  for(
-    let r=2;
-    r<rows.length;
-    r++
-  ){
-
-    const row =
-      rows[r] || [];
-
-
-    const a =
-      clean(row[0]);
-
-    const b =
-      clean(row[1]);
-
-
-    const na =
-      norm(a);
-
-    const nb =
-      norm(b);
-
-
-    /* 원산지에서 종료 */
-
-    if(
-      na.includes('원산지') ||
-      nb.includes('원산지')
-    ){
-
-      break;
-
-    }
-
-
-    /* =========================
-       식사 종류
-    ========================= */
-
-    if(
-      na === '조식' ||
-      na.includes('조식')
-    ){
-
-      meal='조식';
-
-      category=null;
-
-      categoryType=null;
-
-      order=0;
-
-    }
-
-
-    if(
-      na === '중식' ||
-      na.includes('중식')
-    ){
-
-      meal='중식';
-
-      category=null;
-
-      categoryType=null;
-
-      order=0;
-
-    }
-
-
-    if(
-      na === '석식' ||
-      na.includes('석식')
-    ){
-
-      meal='석식';
-
-      category=null;
-
-      categoryType=null;
-
-      order=0;
-
-    }
-
-
-    if(!meal){
-
-      continue;
-
-    }
-
-
-
-    /* =========================
-       조식
-    ========================= */
-
-    if(
-      meal==='조식'
-    ){
-
-      if(
-        nb.includes('활기찬아침')
-      ){
-
-        category='활기찬 아침';
-
-        categoryType='main';
-
-      }
-
-
-      else if(
-        nb.includes('plus')
-      ){
-
-        /*
-          PLUS 코너는
-          활기찬 아침의 하위 메뉴
-        */
-
-        category='활기찬 아침';
-
-        categoryType='plus';
-
-      }
-
-
-      else if(
-        na.includes('to간편식') ||
-        nb.includes('to간편식')
-      ){
-
-        category='T/O 간편식';
-
-        categoryType='to';
-
-      }
-
-    }
-
-
-
-    /* =========================
-       중식
-    ========================= */
-
-    if(
-      meal==='중식'
-    ){
-
-      if(
-        nb.includes('오늘은집밥')
-      ){
-
-        category='오늘은 집밥';
-
-        categoryType='main';
-
-      }
-
-
-      else if(
-        nb.includes('오늘은일품')
-      ){
-
-        category='오늘은 일품';
-
-        categoryType='main';
-
-      }
-
-
-      else if(
-        nb.includes('멀티바')
-      ){
-
-        /*
-          멀티바가 어느 메뉴 아래 있는지
-          직전에 기억하고 있음
-        */
-
-        if(category==='오늘은 집밥'){
-
-          category='오늘은 집밥';
-
-          categoryType='multi-home';
-
-        }
-
-        else if(category==='오늘은 일품'){
-
-          category='오늘은 일품';
-
-          categoryType='multi-item';
-
-        }
-
-      }
-
-
-      else if(
-        na.includes('to샐러드') ||
-        nb.includes('샐러드')
-        && na.includes('to')
-      ){
-
-        category='T/O 샐러드(예약제)';
-
-        categoryType='to-salad';
-
-      }
-
-
-      /*
-        T/O 샐러드 아래의
-        샐러드 / 샌드위치 / 콤보
-      */
-
-      if(
-        category==='T/O 샐러드(예약제)'
-      ){
-
-        if(nb.includes('샌드위치')){
-
-          categoryType='to-sandwich';
-
-        }
-        else if(nb.includes('콤보')){
-
-          categoryType='to-combo';
-
-        }
-        else if(nb.includes('샐러드')){
-
-          categoryType='to-salad';
-
-        }
-
-      }
-
-    }
-
-
-
-    /* =========================
-       석식
-    ========================= */
-
-    if(
-      meal==='석식'
-    ){
-
-      if(
-        nb.includes('건강한저녁')
-      ){
-
-        category='건강한 저녁';
-
-        categoryType='main';
-
-      }
-
-
-      else if(
-        nb.includes('샐러드뷔페')
-      ){
-
-        category='샐러드 뷔페';
-
-        categoryType='salad-buffet';
-
-      }
-
-
-      else if(
-        nb.includes('멀티바')
-      ){
-
-        category='멀티바';
-
-        categoryType='multi';
-
-      }
-
-    }
-
-
-
-    if(!category){
-
-      continue;
-
-    }
-
-
-
-    /* =========================
-       메뉴 저장
-    ========================= */
-
-    for(
-      const [col,k]
-      of dateCols
-    ){
-
-      const value =
-        clean(row[col]);
-
-
-      if(
-        !value ||
-        value==='**'
-      ){
-
-        continue;
-
-      }
-
-
-      /*
-        DB에는 기존 구조를 그대로 사용합니다.
-
-        meal_type = 조식 / 중식 / 석식
-
-        sub_type =
-          활기찬 아침
-          활기찬 아침 > PLUS 코너
-          T/O 간편식
-          오늘은 집밥
-          오늘은 집밥 > 멀티바
-          오늘은 일품
-          오늘은 일품 > 멀티바
-          T/O 샐러드(예약제)
-          T/O 샐러드(예약제) > 샌드위치
-          ...
-      */
-
-
-      let sub=category;
-
-
-      if(
-        categoryType==='plus'
-      ){
-
-        sub='활기찬 아침 > PLUS 코너';
-
-      }
-
-
-      else if(
-        categoryType==='multi-home'
-      ){
-
-        sub='오늘은 집밥 > 멀티바';
-
-      }
-
-
-      else if(
-        categoryType==='multi-item'
-      ){
-
-        sub='오늘은 일품 > 멀티바';
-
-      }
-
-
-      else if(
-        categoryType==='to-sandwich'
-      ){
-
-        sub='T/O 샐러드(예약제) > 샌드위치';
-
-      }
-
-
-      else if(
-        categoryType==='to-combo'
-      ){
-
-        sub='T/O 샐러드(예약제) > 콤보';
-
-      }
-
-
-      else if(
-        categoryType==='to-salad'
-      ){
-
-        sub='T/O 샐러드(예약제) > 샐러드';
-
-      }
-
-
-      result.push({
-
-        menu_date:k,
-
-        meal_type:meal,
-
-        sub_type:sub,
-
-        menu_name:value,
-
-        sort_order:order++
-
-      });
-
-    }
-
-  }
-
-
-  return result;
-
-}
-
-
-
-/* =====================================================
-   기존 양식 분석
-   기존 식단도 계속 사용할 수 있도록 유지
-===================================================== */
-
-function parseOldFormat(rows,dateCols){
-
-  const result=[];
-
-  let meal=null;
-
-  let sub=null;
-
-  let order=0;
-
-
-  for(
-    let r=2;
-    r<rows.length;
-    r++
-  ){
-
-    const row =
-      rows[r] || [];
-
-
-    const a =
-      clean(row[0]);
-
-    const b =
-      clean(row[1]);
-
-    const c =
-      clean(row[2]);
-
-
-    const na =
-      norm(a);
-
-    const nb =
-      norm(b);
-
-    const nc =
-      norm(c);
-
-
-    if(
-      na.includes('원산지') ||
-      nb.includes('원산지')
-    ){
-
-      break;
-
-    }
-
-
-    if(
-      a==='조식' ||
-      a==='중식' ||
-      a==='석식'
-    ){
-
-      meal=a;
-
-      sub=null;
-
-      order=0;
-
-    }
-
-
-    if(!meal){
-
-      continue;
-
-    }
-
-
-    if(
-      meal==='중식' &&
-      nb.includes('멀티바')
-    ){
-
-      sub='멀티바';
-
-    }
-
-
-    if(
-      meal==='중식' &&
-      (
-        nb.includes('takeout') ||
-        nb.includes('샐러드')
-        && na.includes('take')
-      )
-    ){
-
-      sub='Take Out 샐러드';
-
-    }
-
-
-    if(
-      meal==='중식' &&
-      nc==='샐러드'
-    ){
-
-      sub='샐러드';
-
-    }
-
-
-    if(
-      meal==='중식' &&
-      nc==='샌드위치'
-    ){
-
-      sub='샌드위치';
-
-    }
-
-
-    if(
-      meal==='중식' &&
-      nc==='콤보'
-    ){
-
-      sub='콤보';
-
-    }
-
-
-    if(
-      meal==='석식' &&
-      nb.includes('멀티바')
-    ){
-
-      sub='석식 멀티바';
-
-    }
-
-
-    for(
-      const [col,k]
-      of dateCols
-    ){
-
-      const value =
-        clean(row[col]);
-
-
-      if(!value){
-
-        continue;
-
-      }
-
-
-      result.push({
-
-        menu_date:k,
-
-        meal_type:meal,
-
-        sub_type:sub,
-
-        menu_name:value,
-
-        sort_order:order++
-
-      });
-
-    }
-
-  }
-
-
-  return result;
-
-}
-
-
-
-/* =====================================================
-   파일 하나 분석
-===================================================== */
+/* =========================================================
+   엑셀 1개 분석
+========================================================= */
 
 async function parseExcelFile(file){
 
@@ -1285,19 +505,14 @@ async function parseExcelFile(file){
 
 
   const wb =
-    XLSX.read(
-      buf,
-      {
-        type:'array',
-        cellDates:false
-      }
-    );
+    XLSX.read(buf,{
+      type:'array',
+      cellDates:true
+    });
 
 
   const ws =
-    wb.Sheets[
-      wb.SheetNames[0]
-    ];
+    wb.Sheets[wb.SheetNames[0]];
 
 
   const rows =
@@ -1311,23 +526,24 @@ async function parseExcelFile(file){
     );
 
 
-  if(rows.length<3){
+  if(rows.length < 3){
 
     throw new Error(
-      file.name +
-      ': 엑셀 내용이 너무 적습니다.'
+      '엑셀 내용이 너무 적습니다.'
     );
 
   }
 
 
-  /* 날짜 행 */
+  /* =====================================================
+     날짜 열 찾기
+  ===================================================== */
 
   const header =
     rows[1] || [];
 
 
-  const dateCols=[];
+  const dateCols = [];
 
 
   for(
@@ -1345,7 +561,8 @@ async function parseExcelFile(file){
     ){
 
       dateCols.push([
-        c,k
+        c,
+        k
       ]);
 
     }
@@ -1356,49 +573,269 @@ async function parseExcelFile(file){
   if(!dateCols.length){
 
     throw new Error(
-      file.name +
-      ': 날짜를 찾지 못했습니다.'
+      '2번째 행에서 날짜를 찾지 못했습니다.'
     );
 
   }
 
 
-  let result;
+  /* =====================================================
+     메뉴 분석
+  ===================================================== */
+
+  const result = [];
+
+  let meal = '';
+
+  let currentSub = '';
+
+  let order = 0;
 
 
-  /*
-    새 양식이면 새 방식,
-    아니면 기존 방식
-  */
-
-  if(
-    isNewFormat(rows)
+  for(
+    let r=2;
+    r<rows.length;
+    r++
   ){
 
-    result =
-      parseNewFormat(
-        rows,
-        dateCols
-      );
-
-  }
-  else{
-
-    result =
-      parseOldFormat(
-        rows,
-        dateCols
-      );
-
-  }
+    const row =
+      rows[r] || [];
 
 
-  if(!result.length){
+    /* null 방지 */
 
-    throw new Error(
-      file.name +
-      ': 메뉴를 찾지 못했습니다.'
-    );
+    const a =
+      clean(row[0]);
+
+    const b =
+      clean(row[1]);
+
+    const c =
+      clean(row[2]);
+
+
+    const A =
+      compact(a);
+
+    const B =
+      compact(b);
+
+    const C =
+      compact(c);
+
+
+    /* 원산지 부분부터는 메뉴가 아님 */
+
+    if(
+      A.startsWith('원산지') ||
+      B.startsWith('원산지')
+    ){
+
+      break;
+
+    }
+
+
+    /* =================================================
+       식사 종류 변경
+    ================================================= */
+
+    if(A === '조식'){
+
+      meal = '조식';
+
+      currentSub = '';
+
+      order = 0;
+
+    }
+
+
+    else if(A === '중식'){
+
+      meal = '중식';
+
+      currentSub = '';
+
+      order = 0;
+
+    }
+
+
+    else if(A === '석식'){
+
+      meal = '석식';
+
+      currentSub = '';
+
+      order = 0;
+
+    }
+
+
+    /* =================================================
+       조식 분류
+    ================================================= */
+
+    if(meal === '조식'){
+
+      if(B.includes('활기찬아침')){
+
+        currentSub =
+          '활기찬아침';
+
+      }
+
+
+      else if(B.includes('plus코너')){
+
+        currentSub =
+          'PLUS코너';
+
+      }
+
+
+      else if(
+        A.includes('t/o간편식') ||
+        A.includes('to간편식')
+      ){
+
+        currentSub =
+          'T/O간편식';
+
+      }
+
+    }
+
+
+    /* =================================================
+       중식 분류
+    ================================================= */
+
+    if(meal === '중식'){
+
+      if(B.includes('오늘은집밥')){
+
+        currentSub =
+          '오늘은집밥';
+
+      }
+
+
+      else if(B.includes('오늘은일품')){
+
+        currentSub =
+          '오늘은일품';
+
+      }
+
+
+      else if(B.includes('멀티바')){
+
+        currentSub =
+          '멀티바';
+
+      }
+
+
+      else if(
+        A.includes('t/o샐러드') ||
+        A.includes('to샐러드')
+      ){
+
+        currentSub =
+          'T/O샐러드(예약제)';
+
+      }
+
+    }
+
+
+    /* =================================================
+       석식 분류
+    ================================================= */
+
+    if(meal === '석식'){
+
+      if(B.includes('건강한저녁')){
+
+        currentSub =
+          '건강한저녁';
+
+      }
+
+
+      else if(B.includes('샐러드뷔페')){
+
+        currentSub =
+          '샐러드뷔페';
+
+      }
+
+
+      else if(B.includes('멀티바')){
+
+        currentSub =
+          '멀티바';
+
+      }
+
+    }
+
+
+    if(!meal){
+
+      continue;
+
+    }
+
+
+    /* =================================================
+       메뉴 데이터 저장
+    ================================================= */
+
+    for(
+      const [col,k] of dateCols
+    ){
+
+      const value =
+        clean(row[col]);
+
+
+      if(!value){
+
+        continue;
+
+      }
+
+
+      /* 안내문 제외 */
+
+      if(
+        value.includes('올리브식권') ||
+        value.includes('원 산 지')
+      ){
+
+        continue;
+
+      }
+
+
+      result.push({
+
+        menu_date:k,
+
+        meal_type:meal,
+
+        sub_type:currentSub || null,
+
+        menu_name:value,
+
+        sort_order:order++
+
+      });
+
+    }
 
   }
 
@@ -1408,95 +845,123 @@ async function parseExcelFile(file){
 }
 
 
-
-/* =====================================================
+/* =========================================================
    미리보기
-===================================================== */
+========================================================= */
 
-$('previewBtn').onclick =
-async()=>{
+$('previewBtn').onclick = async () => {
 
   const file1 =
     $('file1').files[0];
-
 
   const file2 =
     $('file2').files[0];
 
 
-  if(!file1 || !file2){
+  if(!file1 && !file2){
 
     $('status').textContent =
-      '1주차와 2주차 엑셀파일을 모두 선택하세요.';
+      '엑셀파일을 하나 이상 선택하세요.';
 
     return;
 
   }
 
 
-  $('previewBtn').disabled =
-    true;
+  $('previewBtn').disabled = true;
 
-
-  $('uploadBtn').disabled =
-    true;
+  $('uploadBtn').disabled = true;
 
 
   $('status').textContent =
-    '두 엑셀파일을 분석하는 중입니다...';
+    '엑셀파일을 분석하는 중입니다...';
 
 
   try{
 
-    const data1 =
-      await parseExcelFile(file1);
+    parsed = [];
 
 
-    const data2 =
-      await parseExcelFile(file2);
+    /* 1주차 */
+
+    if(file1){
+
+      const data1 =
+        await parseExcelFile(file1);
+
+      parsed.push(...data1);
+
+    }
 
 
-    parsed=[
-      ...data1,
-      ...data2
-    ];
+    /* 2주차 */
+
+    if(file2){
+
+      const data2 =
+        await parseExcelFile(file2);
+
+      parsed.push(...data2);
+
+    }
 
 
-    parsed.sort(
-      (a,b)=>
-        a.menu_date.localeCompare(
+    if(!parsed.length){
+
+      throw new Error(
+        '메뉴를 찾지 못했습니다. 엑셀 형식을 확인해주세요.'
+      );
+
+    }
+
+
+    /* =================================================
+       날짜 정렬
+    ================================================= */
+
+    parsed.sort((a,b)=>{
+
+      if(a.menu_date !== b.menu_date){
+
+        return a.menu_date.localeCompare(
           b.menu_date
-        )
-    );
+        );
 
+      }
 
-    const dates=[
-      ...new Set(
-        parsed.map(
-          x=>x.menu_date
-        )
-      )
-    ].sort();
-
-
-    const grouped={};
-
-
-    parsed.forEach(x=>{
-
-      (
-        grouped[x.menu_date] ??= []
-      ).push(x);
+      return a.sort_order - b.sort_order;
 
     });
 
 
-    $('preview')
-      .classList
-      .remove('hidden');
+    const grouped = {};
 
 
-    $('preview').innerHTML=
+    parsed.forEach(x=>{
+
+      if(!grouped[x.menu_date]){
+
+        grouped[x.menu_date] = [];
+
+      }
+
+      grouped[x.menu_date].push(x);
+
+    });
+
+
+    const dates =
+      Object.keys(grouped).sort();
+
+
+    /* =================================================
+       미리보기 표
+    ================================================= */
+
+    $('preview').classList.remove('hidden');
+
+
+    $('preview').innerHTML =
 
       '<table>' +
 
@@ -1521,27 +986,21 @@ async()=>{
             <td>${d}</td>
 
             <td>
-              ${
-                list.filter(
-                  x=>x.meal_type==='조식'
-                ).length
-              }
+              ${list.filter(
+                x=>x.meal_type==='조식'
+              ).length}
             </td>
 
             <td>
-              ${
-                list.filter(
-                  x=>x.meal_type==='중식'
-                ).length
-              }
+              ${list.filter(
+                x=>x.meal_type==='중식'
+              ).length}
             </td>
 
             <td>
-              ${
-                list.filter(
-                  x=>x.meal_type==='석식'
-                ).length
-              }
+              ${list.filter(
+                x=>x.meal_type==='석식'
+              ).length}
             </td>
 
             <td>
@@ -1557,100 +1016,101 @@ async()=>{
       '</table>';
 
 
-    const plusCount =
-      parsed.filter(
-        x=>
-          x.sub_type ===
-          '활기찬 아침 > PLUS 코너'
-      ).length;
+    /* =================================================
+       소분류 인식 결과
+    ================================================= */
+
+    const categoryCount = {};
 
 
-    const homeMulti =
-      parsed.filter(
-        x=>
-          x.sub_type ===
-          '오늘은 집밥 > 멀티바'
-      ).length;
+    parsed.forEach(x=>{
+
+      if(!x.sub_type){
+
+        return;
+
+      }
 
 
-    const itemMulti =
-      parsed.filter(
-        x=>
-          x.sub_type ===
-          '오늘은 일품 > 멀티바'
-      ).length;
+      const key =
+        x.meal_type +
+        '|' +
+        x.sub_type;
 
 
-    const toSalad =
-      parsed.filter(
-        x=>
-          x.sub_type.startsWith(
-            'T/O 샐러드(예약제)'
-          )
-      ).length;
+      categoryCount[key] =
+        (categoryCount[key] || 0) + 1;
+
+    });
 
 
-    const dinnerMulti =
-      parsed.filter(
-        x=>
-          x.sub_type ===
-          '멀티바'
-        &&
-          x.meal_type ===
-          '석식'
-      ).length;
+    let categoryText =
+      '<div style="margin-top:18px;font-weight:bold;">소분류 인식 결과</div>';
 
 
-    $('status').innerHTML=
+    const orderList = [
 
-      `
-      총 <b>${dates.length}일</b> /
-      <b>${parsed.length}개</b> 메뉴를 확인했습니다.
+      ['조식','활기찬아침'],
+      ['조식','PLUS코너'],
+      ['조식','T/O간편식'],
 
-      <br><br>
+      ['중식','오늘은집밥'],
+      ['중식','오늘은일품'],
+      ['중식','멀티바'],
+      ['중식','T/O샐러드(예약제)'],
 
-      <b>새 양식 자동 분류 결과</b>
+      ['석식','건강한저녁'],
+      ['석식','샐러드뷔페'],
+      ['석식','멀티바']
 
-      <br><br>
-
-      🌅 활기찬 아침 → PLUS 코너:
-      ${plusCount}개
-
-      <br><br>
-
-      🍱 오늘은 집밥 → 멀티바:
-      ${homeMulti}개
-
-      <br><br>
-
-      🍱 오늘은 일품 → 멀티바:
-      ${itemMulti}개
-
-      <br><br>
-
-      🥗 T/O 샐러드(예약제):
-      ${toSalad}개
-
-      <br><br>
-
-      🌙 석식 → 멀티바:
-      ${dinnerMulti}개
-
-      <br><br>
-
-      날짜와 분류가 맞으면
-      <b>"메뉴 업데이트"</b>를 눌러주세요.
-      `;
+    ];
 
 
-    $('uploadBtn').disabled =
-      false;
+    orderList.forEach(([mealName,subName])=>{
+
+      const key =
+        mealName + '|' + subName;
+
+
+      const count =
+        categoryCount[key] || 0;
+
+
+      if(count > 0){
+
+        categoryText +=
+          `<div style="margin-top:8px;">
+            ${mealName} · ${subName}: ${count}개
+          </div>`;
+
+      }
+
+    });
+
+
+    $('status').innerHTML =
+
+      `총 <strong>${dates.length}일</strong> /
+       <strong>${parsed.length}개</strong> 메뉴를 확인했습니다.
+       <br><br>` +
+
+      categoryText +
+
+      `<br>
+       내용이 맞으면 "메뉴 업데이트"를 눌러주세요.`;
+
+
+    $('uploadBtn').disabled = false;
 
 
   }
+
   catch(e){
 
     console.error(e);
+
+
+    $('preview').classList.add('hidden');
 
 
     $('status').textContent =
@@ -1658,25 +1118,21 @@ async()=>{
       e.message;
 
 
-    $('uploadBtn').disabled =
-      true;
+    $('uploadBtn').disabled = true;
 
   }
 
 
-  $('previewBtn').disabled =
-    false;
+  $('previewBtn').disabled = false;
 
 };
 
 
-
-/* =====================================================
+/* =========================================================
    메뉴 업데이트
-===================================================== */
+========================================================= */
 
-$('uploadBtn').onclick =
-async()=>{
+$('uploadBtn').onclick = async () => {
 
   if(!parsed.length){
 
@@ -1685,8 +1141,7 @@ async()=>{
   }
 
 
-  $('uploadBtn').disabled =
-    true;
+  $('uploadBtn').disabled = true;
 
 
   $('status').textContent =
@@ -1695,18 +1150,22 @@ async()=>{
 
   try{
 
-    const dates=[
+    /* =================================================
+       날짜 목록
+    ================================================= */
+
+    const dates = [
+
       ...new Set(
-        parsed.map(
-          x=>x.menu_date
-        )
+        parsed.map(x=>x.menu_date)
       )
+
     ].sort();
 
 
-    /*
-      해당 날짜의 기존 메뉴 삭제
-    */
+    /* =================================================
+       해당 날짜 기존 메뉴 삭제
+    ================================================= */
 
     for(
       const d of dates
@@ -1716,10 +1175,7 @@ async()=>{
         await sb
           .from('menus')
           .delete()
-          .eq(
-            'menu_date',
-            d
-          );
+          .eq('menu_date',d);
 
 
       if(error){
@@ -1731,9 +1187,9 @@ async()=>{
     }
 
 
-    /*
-      500개씩 저장
-    */
+    /* =================================================
+       새 메뉴 저장
+    ================================================= */
 
     for(
       let i=0;
@@ -1741,15 +1197,14 @@ async()=>{
       i+=500
     ){
 
+      const batch =
+        parsed.slice(i,i+500);
+
+
       const {error} =
         await sb
           .from('menus')
-          .insert(
-            parsed.slice(
-              i,
-              i+500
-            )
-          );
+          .insert(batch);
 
 
       if(error){
@@ -1761,30 +1216,19 @@ async()=>{
     }
 
 
-    $('status').innerHTML=
+    $('status').innerHTML =
 
-      `
-      ✅ <b>업데이트 완료!</b>
-
-      <br><br>
-
-      ${dates[0]}
-      ~
-      ${dates[dates.length-1]}
-
-      <br>
-
-      총 ${dates.length}일 /
-      ${parsed.length}개 메뉴가 저장되었습니다.
-
-      <br><br>
-
-      일반 메뉴 페이지를 새로고침하면
-      반영됩니다.
-      `;
+      `✅ <strong>업데이트 완료!</strong>
+       <br><br>
+       ${dates[0]} ~ ${dates[dates.length-1]}
+       <br>
+       총 ${parsed.length}개 메뉴가 저장되었습니다.
+       <br><br>
+       일반 메뉴 페이지를 새로고침하면 반영됩니다.`;
 
 
   }
+
   catch(e){
 
     console.error(e);
@@ -1795,15 +1239,16 @@ async()=>{
       e.message;
 
 
-    $('uploadBtn').disabled =
-      false;
+    $('uploadBtn').disabled = false;
 
   }
 
 };
 
 
-/* 최초 실행 */
+/* =========================================================
+   최초 실행
+========================================================= */
 
 refresh();
 
