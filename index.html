@@ -79,6 +79,21 @@
 }
 
 
+/* 분류명 옆 운영시간 표시 */
+
+.category-time{
+
+  font-weight:400;
+
+  font-size:0.75em;
+
+  color:#a5978c;
+
+  margin-left:6px;
+
+}
+
+
 /* 메뉴 */
 
 .menu-item{
@@ -289,6 +304,23 @@ const groups=[
     ]
 
   }
+
+];
+
+
+/*
+  최상단(첫번째) 메뉴를 메인메뉴로 강조할 소분류
+*/
+
+const mainMenuCategories=[
+
+  '활기찬 아침',
+
+  '오늘은 집밥',
+
+  '오늘은 일품',
+
+  '건강한 저녁'
 
 ];
 
@@ -678,10 +710,30 @@ async function showDate(){
           (category.main?'main':'');
 
 
-        h.textContent=
-          category.icon+
-          ' '+
-          category.key;
+        /*
+          해당 분류의 운영시간
+          (엑셀 셀에 적힌 시간 정보)
+        */
+
+        const time=
+          list.find(
+            r=>r.sub_time
+          )?.sub_time;
+
+
+        h.innerHTML=
+
+          escapeHtml(
+            category.icon+
+            ' '+
+            category.key
+          )+
+
+          (
+            time
+              ?` <span class="category-time">${escapeHtml(time)}</span>`
+              :''
+          );
 
 
         card.appendChild(h);
@@ -691,7 +743,13 @@ async function showDate(){
           메뉴 출력
         */
 
-        list.forEach(r=>{
+        const isMainCategory=
+          mainMenuCategories.includes(
+            category.key
+          );
+
+
+        list.forEach((r,idx)=>{
 
           const p=
             document.createElement(
@@ -700,7 +758,12 @@ async function showDate(){
 
 
           p.className=
-            'menu-item';
+            'menu-item'+
+            (
+              isMainCategory && idx===0
+                ?' main-menu'
+                :''
+            );
 
 
           p.innerHTML=
