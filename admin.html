@@ -317,6 +317,27 @@ function normalized(v){
 }
 
 
+/*
+  셀 텍스트 안의 시간 정보 추출
+  예: '활기찬\n아침\n(6:50~ 9:00)' → '6:50~9:00'
+*/
+
+function extractTime(v){
+
+  const s=clean(v);
+
+  const m=s.match(
+    /\(([^)]*\d[^)]*)\)/
+  );
+
+
+  return m
+    ? m[1].replace(/\s+/g,'')
+    : null;
+
+}
+
+
 /* 식단 분류 찾기 */
 
 function detectCategory(meal,a,b){
@@ -331,8 +352,23 @@ function detectCategory(meal,a,b){
   if(meal==='조식'){
 
     if(
-      aa.includes('T/O') &&
+      (aa.includes('T/O')||aa.includes('take')) &&
       aa.includes('간편식')
+    ){
+
+      return 'T/O 간편식';
+
+    }
+
+
+    /*
+      구 형식 호환:
+      'take·out(간편식)'이 B열에 오는 경우
+    */
+
+    if(
+      (bb.includes('T/O')||bb.includes('take')) &&
+      bb.includes('간편식')
     ){
 
       return 'T/O 간편식';
@@ -370,8 +406,23 @@ function detectCategory(meal,a,b){
   if(meal==='중식'){
 
     if(
-      aa.includes('T/O') &&
+      (aa.includes('T/O')||aa.includes('take')) &&
       aa.includes('샐러드')
+    ){
+
+      return 'T/O 샐러드 (예약제)';
+
+    }
+
+
+    /*
+      구 형식 호환:
+      'take·out\n샐러드'가 B열에 오는 경우
+    */
+
+    if(
+      (bb.includes('T/O')||bb.includes('take')) &&
+      bb.includes('샐러드')
     ){
 
       return 'T/O 샐러드 (예약제)';
@@ -395,6 +446,22 @@ function detectCategory(meal,a,b){
     ){
 
       return '오늘은 일품';
+
+    }
+
+
+    /*
+      구 형식 호환:
+      9월 이전에는 '오늘은 집밥'/'오늘은 일품' 구분 없이
+      '행복한 점심' 하나로만 표기되어 있었음 → '오늘은 집밥'으로 매핑
+    */
+
+    if(
+      bb.includes('행복한') &&
+      bb.includes('점심')
+    ){
+
+      return '오늘은 집밥';
 
     }
 
@@ -585,6 +652,8 @@ async function parseFile(file){
 
   let sub=null;
 
+  let subTime=null;
+
   let order=0;
 
 
@@ -642,6 +711,10 @@ async function parseFile(file){
 
       sub=detectedSub;
 
+      subTime=
+        extractTime(a)||
+        extractTime(b);
+
       order=0;
 
     }
@@ -677,6 +750,8 @@ async function parseFile(file){
         meal_type:meal,
 
         sub_type:sub,
+
+        sub_time:subTime,
 
         menu_name:value,
 
