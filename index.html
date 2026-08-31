@@ -154,10 +154,60 @@
 </section>
 
 
+<div class="info-boxes">
+
+  <div class="info-box">
+
+    <div class="info-box-title">
+      🕐 식사 대접 시간
+    </div>
+
+    <div class="info-box-body">
+
+      조식 06:50~09:00
+      <br>
+      중식 11:20~14:00 (일반인, 보호자는 13시 이후 가능)
+      <br>
+      석식 17:20~18:50
+
+      <br><br>
+
+      원활한 식사 대접을 위하여 협조 부탁드립니다.
+      <br>
+      정성을 담아 식사 대접하겠습니다.
+
+    </div>
+
+  </div>
+
+
+  <div class="info-box">
+
+    <div class="info-box-title">
+      💰 가격 변경 안내문
+    </div>
+
+    <div class="info-box-body">
+
+      변경 전 - 협력업체/실습생 5,000원 일반고객 6,000원
+      <br>
+      변경 후 - 협력업체/실습생 7,000원 일반고객 8,000원
+
+      <br><br>
+
+      시행일 2026년 9월 1일 화요일
+
+    </div>
+
+  </div>
+
+</div>
+
+
 <div id="menus"></div>
 
 
-<div class="notice">
+<div class="notice" id="notice">
 
 ※ 식자재 수급에 따라 메뉴가 변경될 수 있습니다.
 
@@ -304,6 +354,20 @@ const groups=[
     ]
 
   }
+
+];
+
+
+/*
+  엑셀에 원산지 안내문구가 없는 경우
+  대신 보여줄 기본 문구
+*/
+
+const defaultNotice=[
+
+  '식자재 수급에 따라 메뉴가 변경될 수 있습니다.',
+
+  '알레르기 주의 메뉴가 있으니 게시된 알레르기 정보를 확인해 주세요.'
 
 ];
 
@@ -626,6 +690,40 @@ async function showDate(){
     byMeal[meal][sub].push(r);
 
   });
+
+
+  /*
+    최하단 안내문구
+
+    엑셀 '원산지' 셀에서 뽑아낸 문구가 있으면
+    그걸 사용하고, 없으면 기본 문구를 사용
+  */
+
+  const noticeRow=
+    (data||[]).find(
+      r=>
+        String(r.meal_type||'').trim()==='공지'
+    );
+
+
+  const noticeLines=
+    noticeRow?.menu_name
+      ? String(noticeRow.menu_name).split('\n')
+      : defaultNotice;
+
+
+  document.getElementById(
+    'notice'
+  ).innerHTML=
+
+    noticeLines
+
+      .map(
+        line=>
+          '※ '+escapeHtml(line)
+      )
+
+      .join('<br>');
 
 
   menusEl.innerHTML='';
