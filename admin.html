@@ -597,6 +597,38 @@ function getMealFromRow(a){
 }
 
 
+/*
+  '원산지' 셀에 적힌 안내문구를
+  '*' 기준으로 문장 단위로 분리
+
+  예:
+  '* 문장1.        * 문장2. \n(내용)   \n* 문장3.'
+
+  →
+  ['문장1.', '문장2. (내용)', '문장3.']
+*/
+
+function parseNotice(raw){
+
+  const s=clean(raw);
+
+
+  return s
+
+    .split('*')
+
+    .map(
+      x=>
+        x
+          .replace(/\s+/g,' ')
+          .trim()
+    )
+
+    .filter(Boolean);
+
+}
+
+
 /* 하나의 엑셀 파일 분석 */
 
 async function parseFile(file){
@@ -689,6 +721,8 @@ async function parseFile(file){
 
   let order=0;
 
+  let noticeLines=[];
+
 
   for(
     let r=2;
@@ -703,6 +737,9 @@ async function parseFile(file){
 
     /*
       원산지부터는 메뉴가 아니므로 종료
+
+      이 행의 날짜 칸에 적힌 안내문구를
+      최하단 공지사항으로 사용
     */
 
     if(
@@ -711,6 +748,27 @@ async function parseFile(file){
       normalized(b)==='원산지' ||
       normalized(b)==='원 산 지'
     ){
+
+      for(
+        const [col]
+        of dateCols
+      ){
+
+        const raw=
+          rows[r]?.[col];
+
+
+        if(clean(raw)){
+
+          noticeLines=
+            parseNotice(raw);
+
+          break;
+
+        }
+
+      }
+
 
       break;
 
@@ -831,6 +889,43 @@ async function parseFile(file){
   }
 
 
+  /*
+    이 파일에 포함된 모든 날짜에
+    동일한 공지사항(원산지 안내문구)을 저장
+  */
+
+  if(noticeLines.length){
+
+    const noticeText=
+      noticeLines.join('\n');
+
+
+    for(
+      const [,k]
+      of dateCols
+    ){
+
+      result.push({
+
+        menu_date:k,
+
+        meal_type:'공지',
+
+        sub_type:'원산지',
+
+        sub_time:null,
+
+        menu_name:noticeText,
+
+        sort_order:0
+
+      });
+
+    }
+
+  }
+
+
   return result;
 
 }
@@ -924,10 +1019,22 @@ function renderPreview(){
     '</table>';
 
 
+  const foodItems=
+    parsed.filter(
+      x=>x.meal_type!=='공지'
+    );
+
+
+  const noticeCount=
+    parsed.filter(
+      x=>x.meal_type==='공지'
+    ).length;
+
+
   const counts={};
 
 
-  parsed.forEach(x=>{
+  foodItems.forEach(x=>{
 
     counts[x.sub_type]=
       (counts[x.sub_type]||0)+1;
@@ -937,8 +1044,13 @@ function renderPreview(){
 
   $('status').innerHTML=`
 
-    총 <strong>${dates.length}일 / ${parsed.length}개</strong>
+    총 <strong>${dates.length}일 / ${foodItems.length}개</strong>
     메뉴를 확인했습니다.
+
+    <br>
+
+    📋 원산지·알레르기 안내문구:
+    ${noticeCount}일 인식됨
 
     <br><br>
 
