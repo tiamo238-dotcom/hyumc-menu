@@ -21,10 +21,65 @@ button,input{font:inherit}.wrap{max-width:720px;margin:auto;padding:18px 14px 45
 .subhead{margin:15px 0 5px;padding:8px 10px;border-radius:12px;background:#fff7ee;color:#7b6556;font-weight:800;font-size:14px}
 .notice{font-size:12px;color:var(--muted);line-height:1.65;padding:16px 4px}
 
+/* ===== 구글 Material 스타일 안내 카드 ===== */
+
 .info-boxes{display:flex;flex-direction:column;gap:12px;margin-top:15px}
-.info-box{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px 18px;box-shadow:var(--shadow)}
-.info-box-title{font-size:16px;font-weight:800;color:#5a4035;margin-bottom:8px}
-.info-box-body{font-size:14px;color:var(--text);line-height:1.7}
+
+.g-card{
+  background:#fff;
+  border-radius:16px;
+  padding:18px 20px;
+  box-shadow:0 1px 2px rgba(60,64,67,.30),0 1px 3px 1px rgba(60,64,67,.15);
+}
+
+.g-card-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+
+.g-icon{
+  flex:0 0 auto;
+  width:40px;height:40px;
+  border-radius:50%;
+  background:#e8f0fe;color:#1a73e8;
+  display:flex;align-items:center;justify-content:center;
+}
+.g-icon svg{width:20px;height:20px}
+.g-icon-green{background:#e6f4ea;color:#188038}
+
+.g-card-title{font-size:15.5px;font-weight:700;color:#202124;letter-spacing:-.1px}
+.g-card-sub{font-size:12px;color:#5f6368;margin-top:2px}
+
+.g-list{display:flex;flex-direction:column}
+.g-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 0;border-bottom:1px solid #f1f3f4;
+  font-size:14px;
+}
+.g-row:nth-last-child(1){border-bottom:0}
+.g-row-label{color:#5f6368;font-weight:500}
+.g-row-value{color:#202124;font-weight:700;font-variant-numeric:tabular-nums}
+.g-row-note{
+  border-bottom:0;padding:2px 0 9px;
+  font-size:12.5px;color:#1a73e8;font-weight:500;
+}
+
+.g-card-foot{
+  margin-top:12px;padding-top:12px;
+  border-top:1px solid #f1f3f4;
+  font-size:12.5px;color:#5f6368;line-height:1.65;
+}
+
+.g-price-table{
+  border:1px solid #f1f3f4;border-radius:12px;overflow:hidden;
+}
+.g-price-row{
+  display:grid;grid-template-columns:64px 1fr 1fr;
+  align-items:center;padding:10px 14px;
+  font-size:13.5px;
+}
+.g-price-head{background:#f8f9fa;color:#5f6368;font-weight:500;font-size:11.5px}
+.g-price-before{color:#9aa0a6}
+.g-price-before span:not(.g-price-tag){text-decoration:line-through;text-decoration-color:#dadce0}
+.g-price-after{background:#e6f4ea;color:#188038;font-weight:700}
+.g-price-tag{font-size:12px;font-weight:700;color:inherit}
 .admin-wrap{max-width:760px;margin:auto;padding:18px 14px 50px}.admin-card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:20px;box-shadow:var(--shadow);margin-top:14px}
 h1,h2{margin:0}.admin-title{font-size:25px}.small{font-size:13px;color:var(--muted);line-height:1.6}
 input[type=file]{width:100%;padding:13px;border:1px dashed #d8c8bb;border-radius:14px;background:#fffaf5}
