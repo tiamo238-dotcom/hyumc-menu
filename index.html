@@ -17,6 +17,11 @@
   href="style.css"
 >
 
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f29b7a">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+
 <style>
 
 /* 날짜 선택 */
@@ -151,7 +156,65 @@
     오늘 메뉴로 돌아가기
   </button>
 
+
+  <button
+    class="installbtn hidden"
+    id="installBtn"
+  >
+    📲 홈 화면에 추가
+  </button>
+
 </section>
+
+
+<!--
+  iOS 안내 팝업
+
+  iOS는 앱 설치를 코드로 띄울 수 없어서
+  "공유 > 홈 화면에 추가" 방법을 직접 안내합니다.
+-->
+
+<div class="ios-guide hidden" id="iosGuide">
+
+  <div class="ios-guide-card">
+
+    <div class="ios-guide-title">
+      홈 화면에 추가하는 방법
+    </div>
+
+    <ol class="ios-guide-steps">
+
+      <li>
+        하단(또는 상단)의
+        <strong>공유 버튼</strong>
+        <span class="ios-share-icon">⬆️</span>
+        을 누르세요
+      </li>
+
+      <li>
+        메뉴에서
+        <strong>"홈 화면에 추가"</strong>
+        를 선택하세요
+      </li>
+
+      <li>
+        오른쪽 위
+        <strong>"추가"</strong>
+        를 누르면 완료!
+      </li>
+
+    </ol>
+
+    <button
+      class="action"
+      id="iosGuideClose"
+    >
+      확인했어요
+    </button>
+
+  </div>
+
+</div>
 
 
 <div class="info-boxes">
@@ -1195,6 +1258,186 @@ todayBtn.onclick=
   );
 
 })();
+
+
+/*
+  홈 화면에 추가 (PWA 설치)
+*/
+
+const installBtn=
+  document.getElementById('installBtn');
+
+const iosGuide=
+  document.getElementById('iosGuide');
+
+const iosGuideClose=
+  document.getElementById('iosGuideClose');
+
+
+/*
+  이미 홈 화면에서 실행 중인지 확인
+
+  (standalone 모드면 설치 버튼이 필요 없음)
+*/
+
+function isStandalone(){
+
+  return (
+    window.matchMedia(
+      '(display-mode: standalone)'
+    ).matches
+  ) ||
+    window.navigator.standalone===true;
+
+}
+
+
+/*
+  iOS Safari 여부 확인
+
+  iOS는 beforeinstallprompt 이벤트가 없어서
+  직접 안내 문구를 보여줘야 합니다.
+*/
+
+function isIos(){
+
+  return (
+    /iphone|ipad|ipod/i.test(
+      window.navigator.userAgent
+    )
+  );
+
+}
+
+
+let deferredPrompt=null;
+
+
+/*
+  안드로이드/크롬:
+  브라우저가 설치 가능하다고 판단하면
+  이 이벤트가 발생합니다.
+*/
+
+window.addEventListener(
+  'beforeinstallprompt',
+  e=>{
+
+    e.preventDefault();
+
+    deferredPrompt=e;
+
+
+    if(!isStandalone()){
+
+      installBtn.classList.remove(
+        'hidden'
+      );
+
+    }
+
+  }
+);
+
+
+/*
+  iOS는 이벤트가 없으므로
+  standalone이 아니면 그냥 버튼을 보여줍니다.
+*/
+
+if(isIos() && !isStandalone()){
+
+  installBtn.classList.remove(
+    'hidden'
+  );
+
+}
+
+
+installBtn.onclick=
+  async()=>{
+
+    if(deferredPrompt){
+
+      deferredPrompt.prompt();
+
+      await deferredPrompt.userChoice;
+
+      deferredPrompt=null;
+
+      installBtn.classList.add(
+        'hidden'
+      );
+
+      return;
+
+    }
+
+
+    /*
+      deferredPrompt가 없는 경우
+      (iOS, 또는 크롬이 아직 설치가능 판단을 안 한 경우)
+      → 직접 안내 팝업 표시
+    */
+
+    iosGuide.classList.remove(
+      'hidden'
+    );
+
+  };
+
+
+iosGuideClose.onclick=
+  ()=>{
+
+    iosGuide.classList.add(
+      'hidden'
+    );
+
+  };
+
+
+/*
+  설치가 완료되면 버튼을 숨깁니다.
+*/
+
+window.addEventListener(
+  'appinstalled',
+  ()=>{
+
+    installBtn.classList.add(
+      'hidden'
+    );
+
+    deferredPrompt=null;
+
+  }
+);
+
+
+/*
+  서비스워커 등록
+
+  (홈 화면 추가 조건 충족을 위해 필요,
+  메뉴 데이터는 캐싱하지 않습니다)
+*/
+
+if('serviceWorker' in navigator){
+
+  window.addEventListener(
+    'load',
+    ()=>{
+
+      navigator.serviceWorker
+
+        .register('sw.js')
+
+        .catch(()=>{});
+
+    }
+  );
+
+}
 
 
 /*
