@@ -13,6 +13,42 @@ button,input{font:inherit}.wrap{max-width:720px;margin:auto;padding:18px 14px 45
 .datebar button{width:44px;height:44px;border:0;border-radius:14px;background:#fff4e8;cursor:pointer}
 .datebar select{flex:1;height:44px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:0 12px;text-align:center;color:var(--text)}
 .todaybtn{margin-top:10px;border:0;background:#fff;border-bottom:1px dashed #d8c8bb;color:#8b6b58;padding:4px 8px;cursor:pointer}
+
+.installbtn{
+  margin-top:14px;
+  border:0;
+  border-radius:14px;
+  background:#f29b7a;
+  color:#fff;
+  font-weight:800;
+  font-size:14px;
+  padding:11px 18px;
+  cursor:pointer;
+  box-shadow:0 6px 16px rgba(242,155,122,.35);
+}
+.installbtn:active{transform:scale(.97)}
+
+.ios-guide{
+  position:fixed;
+  inset:0;
+  z-index:50;
+  background:rgba(63,58,54,.45);
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+}
+.ios-guide-card{
+  width:100%;
+  max-width:420px;
+  background:#fff;
+  border-radius:24px 24px 0 0;
+  padding:22px 20px 26px;
+  box-shadow:0 -8px 24px rgba(0,0,0,.15);
+}
+.ios-guide-title{font-size:18px;font-weight:800;margin-bottom:14px;color:#3f3a36}
+.ios-guide-steps{margin:0 0 18px;padding-left:20px;line-height:1.9;font-size:14.5px;color:#3f3a36}
+.ios-guide-steps li{margin-bottom:4px}
+.ios-share-icon{display:inline-block}
 .card{margin-top:15px;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:var(--shadow)}
 
 /* 날짜 이동 시 슬라이드 애니메이션 */
