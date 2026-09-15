@@ -1,6 +1,6 @@
 {
-  "name": "한양대학교병원 직원식당",
-  "short_name": "한양대학교병원 직원식당",
+  "name": "오늘식단",
+  "short_name": "오늘식단",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

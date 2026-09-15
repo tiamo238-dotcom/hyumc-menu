@@ -26,7 +26,7 @@
   iOS 홈 화면 추가 시 아이콘 아래 표시될 이름
   (지정하지 않으면 <title> 전체가 쓰여 길어질 수 있음)
 -->
-<meta name="apple-mobile-web-app-title" content="한양대학교병원 직원식당">
+<meta name="apple-mobile-web-app-title" content="오늘식단">
 <meta name="apple-mobile-web-app-capable" content="yes">
 
 <style>
@@ -229,6 +229,21 @@
     </button>
 
   </div>
+
+</div>
+
+
+<!--
+  설치 완료 토스트 알림
+-->
+
+<div class="install-toast install-toast-hidden" id="installToast">
+
+  <span class="install-toast-check">✅</span>
+
+  <span id="installToastText">
+    설치가 완료되었습니다
+  </span>
 
 </div>
 
@@ -1370,6 +1385,48 @@ if(isIos() && !isStandalone()){
 }
 
 
+/*
+  설치 완료 토스트 알림
+*/
+
+const installToast=
+  document.getElementById('installToast');
+
+const installToastText=
+  document.getElementById('installToastText');
+
+
+let toastTimer=null;
+
+
+function showToast(msg){
+
+  installToastText.textContent=msg;
+
+
+  installToast.classList.remove(
+    'install-toast-hidden'
+  );
+
+
+  clearTimeout(toastTimer);
+
+
+  toastTimer=
+    setTimeout(
+      ()=>{
+
+        installToast.classList.add(
+          'install-toast-hidden'
+        );
+
+      },
+      3200
+    );
+
+}
+
+
 installBtn.onclick=
   async()=>{
 
@@ -1377,13 +1434,36 @@ installBtn.onclick=
 
       deferredPrompt.prompt();
 
-      await deferredPrompt.userChoice;
+
+      const choice=
+        await deferredPrompt.userChoice;
+
 
       deferredPrompt=null;
 
       installBtn.classList.add(
         'hidden'
       );
+
+
+      /*
+        안드로이드는 '설치'가 완료되면
+        앱 보관함에 아이콘이 생기는 것이
+        정상 동작입니다 (다른 설치 앱과 동일).
+
+        기기/런처에 따라 홈 화면에는
+        자동으로 추가되지 않을 수 있어서,
+        길게 눌러 옮기는 방법을 함께 안내합니다.
+      */
+
+      if(choice.outcome==='accepted'){
+
+        showToast(
+          '설치가 완료되었습니다 · 앱 보관함에서 아이콘을 길게 눌러 홈 화면으로 옮길 수 있어요'
+        );
+
+      }
+
 
       return;
 
