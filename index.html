@@ -650,10 +650,48 @@ async function loadDates(){
   선택한 날짜의 메뉴 표시
 */
 
+/*
+  직전에 화면에 그려졌던 날짜의 인덱스
+
+  현재 인덱스와 비교해서
+  슬라이드 방향(왼쪽/오른쪽)을 판단하는 데 사용
+*/
+
+let lastRenderedIndex=null;
+
+
 async function showDate(){
 
   const date=
     dates[currentIndex];
+
+
+  /*
+    슬라이드 방향 계산
+
+    다음 날짜(인덱스 증가) → 오른쪽에서 슬라이드 인
+    이전 날짜(인덱스 감소) → 왼쪽에서 슬라이드 인
+    최초 로딩 등 비교 대상이 없으면 애니메이션 없음
+  */
+
+  const slideDir=
+
+    lastRenderedIndex===null
+
+      ?null
+
+      :currentIndex>lastRenderedIndex
+
+        ?'right'
+
+        :currentIndex<lastRenderedIndex
+
+          ?'left'
+
+          :null;
+
+
+  lastRenderedIndex=currentIndex;
 
 
   dateSelect.value=
@@ -941,6 +979,33 @@ async function showDate(){
     menusEl.appendChild(card);
 
   });
+
+
+  /*
+    슬라이드 애니메이션 적용
+
+    같은 방향으로 연속 이동해도 애니메이션이
+    다시 재생되도록 클래스를 지웠다가 다시 붙입니다.
+  */
+
+  menusEl.classList.remove(
+    'slide-in-left',
+    'slide-in-right'
+  );
+
+
+  if(slideDir){
+
+    void menusEl.offsetWidth;
+
+
+    menusEl.classList.add(
+      slideDir==='right'
+        ?'slide-in-right'
+        :'slide-in-left'
+    );
+
+  }
 
 }
 
