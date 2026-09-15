@@ -14,6 +14,25 @@ button,input{font:inherit}.wrap{max-width:720px;margin:auto;padding:18px 14px 45
 .datebar select{flex:1;height:44px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:0 12px;text-align:center;color:var(--text)}
 .todaybtn{margin-top:10px;border:0;background:#fff;border-bottom:1px dashed #d8c8bb;color:#8b6b58;padding:4px 8px;cursor:pointer}
 .card{margin-top:15px;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:var(--shadow)}
+
+/* 날짜 이동 시 슬라이드 애니메이션 */
+
+@keyframes slideInFromRight{
+  from{opacity:0;transform:translateX(28px)}
+  to{opacity:1;transform:translateX(0)}
+}
+
+@keyframes slideInFromLeft{
+  from{opacity:0;transform:translateX(-28px)}
+  to{opacity:1;transform:translateX(0)}
+}
+
+#menus.slide-in-right{animation:slideInFromRight .28s ease-out}
+#menus.slide-in-left{animation:slideInFromLeft .28s ease-out}
+
+@media(prefers-reduced-motion:reduce){
+  #menus.slide-in-right,#menus.slide-in-left{animation:none}
+}
 .card-head{display:flex;align-items:center;gap:9px;margin-bottom:10px}
 .card-icon{font-size:24px}.card-title{font-size:20px;font-weight:800}.card-sub{font-size:12px;color:var(--muted);margin-left:auto}
 .menu-item{padding:10px 3px;border-bottom:1px solid #f4eee8;font-size:16px;line-height:1.55}
