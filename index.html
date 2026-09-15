@@ -973,39 +973,43 @@ dateSelect.onchange=
   이전 날짜
 */
 
-prev.onclick=
-  async()=>{
+async function goPrev(){
 
-    if(currentIndex>0){
+  if(currentIndex>0){
 
-      currentIndex--;
+    currentIndex--;
 
-      await showDate();
+    await showDate();
 
-    }
+  }
 
-  };
+}
+
+
+prev.onclick=goPrev;
 
 
 /*
   다음 날짜
 */
 
-next.onclick=
-  async()=>{
+async function goNext(){
 
-    if(
-      currentIndex<
-      dates.length-1
-    ){
+  if(
+    currentIndex<
+    dates.length-1
+  ){
 
-      currentIndex++;
+    currentIndex++;
 
-      await showDate();
+    await showDate();
 
-    }
+  }
 
-  };
+}
+
+
+next.onclick=goNext;
 
 
 /*
@@ -1032,6 +1036,100 @@ todayBtn.onclick=
     await showDate();
 
   };
+
+
+/*
+  모바일 스와이프로 날짜 이동
+
+  왼쪽으로 스와이프 → 다음 날짜
+  오른쪽으로 스와이프 → 이전 날짜
+
+  세로 스크롤과 헷갈리지 않도록
+  가로 이동량이 세로 이동량보다
+  충분히 클 때만 스와이프로 인정합니다.
+*/
+
+(function(){
+
+  const swipeTarget=
+    document.querySelector('.wrap');
+
+
+  const minDistance=50;
+
+
+  let startX=null;
+
+  let startY=null;
+
+
+  swipeTarget.addEventListener(
+    'touchstart',
+    e=>{
+
+      const t=
+        e.changedTouches[0];
+
+
+      startX=t.clientX;
+
+      startY=t.clientY;
+
+    },
+    {passive:true}
+  );
+
+
+  swipeTarget.addEventListener(
+    'touchend',
+    e=>{
+
+      if(startX===null) return;
+
+
+      const t=
+        e.changedTouches[0];
+
+
+      const dx=
+        t.clientX-startX;
+
+      const dy=
+        t.clientY-startY;
+
+
+      startX=null;
+
+      startY=null;
+
+
+      if(
+        Math.abs(dx)<minDistance
+      ) return;
+
+
+      if(
+        Math.abs(dx)<
+        Math.abs(dy)*1.5
+      ) return;
+
+
+      if(dx<0){
+
+        goNext();
+
+      }
+      else{
+
+        goPrev();
+
+      }
+
+    },
+    {passive:true}
+  );
+
+})();
 
 
 /*
