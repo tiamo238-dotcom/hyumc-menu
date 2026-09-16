@@ -386,6 +386,21 @@ const sb=
   );
 
 
+/*
+  접속 기록 남기기 (관리자 페이지 통계용)
+
+  실패하더라도 메뉴 화면에는
+  전혀 영향이 없도록 조용히 무시합니다.
+*/
+
+sb.from('page_views')
+  .insert([{}])
+  .then(
+    ()=>{},
+    ()=>{}
+  );
+
+
 const dateSelect=
   document.getElementById('dateSelect');
 

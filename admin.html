@@ -24,6 +24,92 @@
 .category-result{
   line-height:2.1
 }
+
+/* ===== 접속자 통계 ===== */
+
+.stats-tabs{
+  display:flex;
+  gap:8px;
+  margin:14px 0 18px;
+}
+.stats-tab{
+  flex:1;
+  padding:10px 0;
+  border:1px solid #eee2dc;
+  border-radius:12px;
+  background:#fff;
+  color:#8b6b58;
+  font-weight:700;
+  font-size:14px;
+  cursor:pointer;
+}
+.stats-tab.active{
+  background:#f29b7a;
+  border-color:#f29b7a;
+  color:#fff;
+}
+
+.stats-summary{
+  font-size:14px;
+  color:#5f554d;
+  margin-bottom:14px;
+}
+.stats-summary strong{
+  color:#d66f4d;
+  font-size:17px;
+}
+
+.stats-chart{
+  overflow-x:auto;
+  padding-bottom:4px;
+}
+
+.stats-bars{
+  display:flex;
+  align-items:flex-end;
+  gap:10px;
+  min-height:190px;
+  padding:0 4px;
+}
+
+.stats-bar-col{
+  flex:0 0 auto;
+  width:40px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-end;
+}
+
+.stats-bar-count{
+  font-size:11px;
+  color:#8b6b58;
+  margin-bottom:4px;
+  font-weight:700;
+}
+
+.stats-bar{
+  width:100%;
+  background:linear-gradient(180deg,#f7c96b,#f29b7a);
+  border-radius:6px 6px 2px 2px;
+  min-height:2px;
+}
+
+.stats-bar-label{
+  font-size:10.5px;
+  color:#a5978c;
+  margin-top:6px;
+  white-space:nowrap;
+  transform:rotate(0deg);
+  text-align:center;
+}
+
+.stats-empty{
+  padding:30px 0;
+  text-align:center;
+  color:#a5978c;
+  font-size:13.5px;
+}
 </style>
 </head>
 
@@ -137,6 +223,49 @@
 
 </section>
 
+
+<section id="statsCard" class="admin-card hidden">
+
+  <h2>📊 접속자 통계</h2>
+
+  <p class="small">
+    식단 웹페이지(index.html) 접속 횟수 추이입니다.
+  </p>
+
+
+  <div class="stats-tabs">
+
+    <button
+      class="stats-tab active"
+      data-range="daily"
+    >
+      일별
+    </button>
+
+    <button
+      class="stats-tab"
+      data-range="weekly"
+    >
+      주별
+    </button>
+
+    <button
+      class="stats-tab"
+      data-range="monthly"
+    >
+      월별
+    </button>
+
+  </div>
+
+
+  <div id="statsSummary" class="stats-summary"></div>
+
+
+  <div id="statsChart" class="stats-chart"></div>
+
+</section>
+
 </div>
 
 
@@ -183,6 +312,19 @@ async function refresh(){
     'hidden',
     !logged
   );
+
+  $('statsCard').classList.toggle(
+    'hidden',
+    !logged
+  );
+
+
+  if(logged){
+
+    loadStats(currentStatsRange);
+
+  }
+
 }
 
 
@@ -1293,6 +1435,500 @@ $('uploadBtn').onclick=async()=>{
   }
 
 };
+
+
+/* ===== 접속자 통계 ===== */
+
+let currentStatsRange='daily';
+
+
+/*
+  UTC 타임스탬프를 한국시간(KST) 기준
+  YYYY-MM-DD 문자열로 변환
+
+  (브라우저 시간대에 관계없이
+  항상 같은 결과가 나오도록 직접 계산)
+*/
+
+function toKstDateKey(isoString){
+
+  const utcMs=
+    new Date(isoString).getTime();
+
+  const kst=
+    new Date(utcMs+9*60*60*1000);
+
+
+  const y=kst.getUTCFullYear();
+
+  const m=
+    String(
+      kst.getUTCMonth()+1
+    ).padStart(2,'0');
+
+  const d=
+    String(
+      kst.getUTCDate()
+    ).padStart(2,'0');
+
+
+  return `${y}-${m}-${d}`;
+
+}
+
+
+/*
+  해당 날짜가 속한 주(월~일)의
+  월요일 날짜(YYYY-MM-DD)를 계산
+*/
+
+function mondayKeyOf(dateKey){
+
+  const [y,m,d]=
+    dateKey.split('-').map(Number);
+
+  const dt=
+    new Date(
+      Date.UTC(y,m-1,d)
+    );
+
+  const day=dt.getUTCDay();
+
+  const diff=
+    day===0
+      ?-6
+      :1-day;
+
+
+  dt.setUTCDate(
+    dt.getUTCDate()+diff
+  );
+
+
+  const yy=dt.getUTCFullYear();
+
+  const mm=
+    String(
+      dt.getUTCMonth()+1
+    ).padStart(2,'0');
+
+  const dd=
+    String(
+      dt.getUTCDate()
+    ).padStart(2,'0');
+
+
+  return `${yy}-${mm}-${dd}`;
+
+}
+
+
+/*
+  YYYY-MM-DD → M/D(요일) 표시용 문자열
+*/
+
+function shortLabel(dateKey){
+
+  const [y,m,d]=
+    dateKey.split('-').map(Number);
+
+  const wd=
+    ['일','월','화','수','목','금','토'][
+      new Date(
+        Date.UTC(y,m-1,d)
+      ).getUTCDay()
+    ];
+
+
+  return `${m}/${d}(${wd})`;
+
+}
+
+
+/*
+  선택한 기간(daily/weekly/monthly)에 맞춰
+  Supabase에서 접속 기록을 불러와 집계
+*/
+
+async function loadStats(range){
+
+  currentStatsRange=range;
+
+
+  document
+    .querySelectorAll('.stats-tab')
+    .forEach(btn=>{
+
+      btn.classList.toggle(
+        'active',
+        btn.dataset.range===range
+      );
+
+    });
+
+
+  $('statsChart').innerHTML=
+    '<div class="stats-empty">불러오는 중...</div>';
+
+
+  /*
+    기간별로 필요한 만큼만 조회
+    (전체를 다 불러오지 않도록)
+  */
+
+  const daysBack=
+    range==='daily'
+      ?30
+      :range==='weekly'
+        ?84  // 약 12주
+        :365; // 약 12개월
+
+
+  const since=
+    new Date(
+      Date.now()-daysBack*86400000
+    ).toISOString();
+
+
+  const {data,error}=
+    await sb
+      .from('page_views')
+      .select('viewed_at')
+      .gte('viewed_at',since)
+      .order('viewed_at');
+
+
+  if(error){
+
+    $('statsChart').innerHTML=
+      `<div class="stats-empty">
+        통계를 불러오지 못했습니다.
+        <br>
+        ${error.message}
+      </div>`;
+
+    $('statsSummary').textContent='';
+
+    return;
+
+  }
+
+
+  const rows=data||[];
+
+
+  /*
+    그룹 키 계산
+    (일별: 날짜 / 주별: 그 주의 월요일 / 월별: 년-월)
+  */
+
+  const counts={};
+
+
+  rows.forEach(r=>{
+
+    const dateKey=
+      toKstDateKey(r.viewed_at);
+
+
+    let key;
+
+
+    if(range==='daily'){
+
+      key=dateKey;
+
+    }
+    else if(range==='weekly'){
+
+      key=mondayKeyOf(dateKey);
+
+    }
+    else{
+
+      key=dateKey.slice(0,7);
+
+    }
+
+
+    counts[key]=
+      (counts[key]||0)+1;
+
+  });
+
+
+  /*
+    화면에 표시할 구간 목록 생성
+    (데이터가 없는 날짜/주/달도 0으로 표시)
+  */
+
+  const items=[];
+
+
+  if(range==='daily'){
+
+    for(
+      let i=daysBack-1;
+      i>=0;
+      i--
+    ){
+
+      const d=
+        new Date(
+          Date.now()-i*86400000
+        );
+
+      const key=
+        toKstDateKey(d.toISOString());
+
+
+      items.push({
+
+        key,
+
+        label:shortLabel(key),
+
+        count:counts[key]||0
+
+      });
+
+    }
+
+  }
+  else if(range==='weekly'){
+
+    const todayKey=
+      toKstDateKey(
+        new Date().toISOString()
+      );
+
+    const thisMonday=
+      mondayKeyOf(todayKey);
+
+
+    const weeks=[];
+
+    let cursor=thisMonday;
+
+
+    for(
+      let i=0;
+      i<12;
+      i++
+    ){
+
+      weeks.unshift(cursor);
+
+
+      const [y,m,d]=
+        cursor.split('-').map(Number);
+
+      const dt=
+        new Date(
+          Date.UTC(y,m-1,d)
+        );
+
+      dt.setUTCDate(
+        dt.getUTCDate()-7
+      );
+
+
+      cursor=
+        `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
+
+    }
+
+
+    weeks.forEach(mon=>{
+
+      const [y,m,d]=
+        mon.split('-').map(Number);
+
+      const sun=
+        new Date(
+          Date.UTC(y,m-1,d)
+        );
+
+      sun.setUTCDate(
+        sun.getUTCDate()+6
+      );
+
+
+      const label=
+        `${m}/${d}~${sun.getUTCMonth()+1}/${sun.getUTCDate()}`;
+
+
+      items.push({
+
+        key:mon,
+
+        label,
+
+        count:counts[mon]||0
+
+      });
+
+    });
+
+  }
+  else{
+
+    const now=new Date();
+
+    const cursor=
+      new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          1
+        )
+      );
+
+
+    const monthsList=[];
+
+
+    for(
+      let i=0;
+      i<12;
+      i++
+    ){
+
+      const y=cursor.getUTCFullYear();
+
+      const m=
+        String(
+          cursor.getUTCMonth()+1
+        ).padStart(2,'0');
+
+
+      monthsList.unshift(`${y}-${m}`);
+
+
+      cursor.setUTCMonth(
+        cursor.getUTCMonth()-1
+      );
+
+    }
+
+
+    monthsList.forEach(key=>{
+
+      const [y,m]=
+        key.split('-');
+
+
+      items.push({
+
+        key,
+
+        label:`${y}.${m}`,
+
+        count:counts[key]||0
+
+      });
+
+    });
+
+  }
+
+
+  const total=
+    items.reduce(
+      (sum,x)=>sum+x.count,
+      0
+    );
+
+
+  const rangeLabel=
+    range==='daily'
+      ?'최근 30일'
+      :range==='weekly'
+        ?'최근 12주'
+        :'최근 12개월';
+
+
+  $('statsSummary').innerHTML=
+
+    `${rangeLabel} 총 접속
+    <strong>${total}</strong>회`;
+
+
+  renderStatsChart(items);
+
+}
+
+
+/*
+  막대그래프 렌더링 (순수 HTML/CSS, 외부 차트 라이브러리 없음)
+*/
+
+function renderStatsChart(items){
+
+  if(!items.length){
+
+    $('statsChart').innerHTML=
+      '<div class="stats-empty">데이터가 없습니다.</div>';
+
+    return;
+
+  }
+
+
+  const max=
+    Math.max(
+      ...items.map(x=>x.count),
+      1
+    );
+
+
+  const bars=
+    items.map(x=>{
+
+      const h=
+        Math.max(
+          Math.round(
+            (x.count/max)*140
+          ),
+          x.count>0?4:0
+        );
+
+
+      return `
+        <div class="stats-bar-col">
+          <div class="stats-bar-count">${x.count}</div>
+          <div class="stats-bar" style="height:${h}px" title="${x.label}: ${x.count}회"></div>
+          <div class="stats-bar-label">${x.label}</div>
+        </div>
+      `;
+
+    }).join('');
+
+
+  $('statsChart').innerHTML=
+    `<div class="stats-bars">${bars}</div>`;
+
+}
+
+
+/*
+  탭 클릭
+*/
+
+document
+  .querySelectorAll('.stats-tab')
+  .forEach(btn=>{
+
+    btn.onclick=
+      ()=>{
+
+        loadStats(
+          btn.dataset.range
+        );
+
+      };
+
+  });
 
 
 refresh();
