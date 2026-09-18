@@ -1437,9 +1437,55 @@ $('uploadBtn').onclick=async()=>{
 };
 
 
-/* ===== 접속자 통계 ===== */
+/*
+  ===== 접속자 통계 ===== 
+*/
 
 let currentStatsRange='daily';
+
+
+/*
+  집계는 DB(page_view_counts 함수) 안에서 처리합니다.
+
+  데이터가 아무리 많이 쌓여도(수십만 건 이상)
+  항상 "구간별 개수"만 받아오기 때문에
+  느려지지 않습니다.
+
+  bucket: 'day' | 'week' | 'month'
+  반환값: { 'YYYY-MM-DD' 또는 'YYYY-MM' : 개수 } 형태의 맵
+*/
+
+async function fetchBucketCounts(bucket,since){
+
+  const {data,error}=
+    await sb.rpc(
+      'page_view_counts',
+      {bucket,since}
+    );
+
+
+  if(error) throw error;
+
+
+  const map={};
+
+
+  (data||[]).forEach(row=>{
+
+    const key=
+      bucket==='month'
+        ?String(row.bucket_start).slice(0,7)
+        :String(row.bucket_start).slice(0,10);
+
+
+    map[key]=Number(row.cnt);
+
+  });
+
+
+  return map;
+
+}
 
 
 /*
@@ -1590,15 +1636,27 @@ async function loadStats(range){
     ).toISOString();
 
 
-  const {data,error}=
-    await sb
-      .from('page_views')
-      .select('viewed_at')
-      .gte('viewed_at',since)
-      .order('viewed_at');
+  const bucket=
+    range==='daily'
+      ?'day'
+      :range==='weekly'
+        ?'week'
+        :'month';
 
 
-  if(error){
+  let counts;
+
+
+  try{
+
+    counts=
+      await fetchBucketCounts(
+        bucket,
+        since
+      );
+
+  }
+  catch(error){
 
     $('statsChart').innerHTML=
       `<div class="stats-empty">
@@ -1612,49 +1670,6 @@ async function loadStats(range){
     return;
 
   }
-
-
-  const rows=data||[];
-
-
-  /*
-    그룹 키 계산
-    (일별: 날짜 / 주별: 그 주의 월요일 / 월별: 년-월)
-  */
-
-  const counts={};
-
-
-  rows.forEach(r=>{
-
-    const dateKey=
-      toKstDateKey(r.viewed_at);
-
-
-    let key;
-
-
-    if(range==='daily'){
-
-      key=dateKey;
-
-    }
-    else if(range==='weekly'){
-
-      key=mondayKeyOf(dateKey);
-
-    }
-    else{
-
-      key=dateKey.slice(0,7);
-
-    }
-
-
-    counts[key]=
-      (counts[key]||0)+1;
-
-  });
 
 
   /*
