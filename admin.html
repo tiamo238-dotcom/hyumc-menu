@@ -1363,23 +1363,26 @@ $('uploadBtn').onclick=async()=>{
 
 
     /*
-      이번에 업로드한 날짜의 기존 메뉴만 삭제
+      기존 메뉴 전체 삭제
+
+      (겹치는 날짜만 지우면 예전에 올렸던
+      다른 주차 데이터가 계속 남아있게 되어,
+      과거 식단이 사라지지 않는 문제와
+      테이블이 계속 커지는 문제가 함께 생깁니다.
+
+      이번에 올린 1주차+2주차 식단이
+      항상 전체 식단표가 되도록
+      기존 데이터를 전부 지우고 새로 저장합니다.)
     */
 
-    for(
-      const d of dates
-    ){
-
-      const {error}=
-        await sb
-          .from('menus')
-          .delete()
-          .eq('menu_date',d);
+    const {error:delError}=
+      await sb
+        .from('menus')
+        .delete()
+        .neq('id',0);
 
 
-      if(error) throw error;
-
-    }
+    if(delError) throw delError;
 
 
     /*

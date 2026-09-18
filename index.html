@@ -677,21 +677,62 @@ function escapeHtml(v){
   등록된 날짜 목록 불러오기
 */
 
+/*
+  Supabase(PostgREST)는 한 번에 최대 1000행까지만
+  반환하므로, 혹시 메뉴 데이터가 많이 쌓여있어도
+  날짜 목록이 잘리지 않도록 1000개씩 나눠서
+  끝까지 가져옵니다.
+*/
+
+async function fetchAllMenuDates(){
+
+  const pageSize=1000;
+
+  let from=0;
+
+  let all=[];
+
+
+  while(true){
+
+    const {data,error}=
+      await sb
+        .from('menus')
+        .select('menu_date')
+        .order(
+          'menu_date',
+          {ascending:true}
+        )
+        .range(from,from+pageSize-1);
+
+
+    if(error) throw error;
+
+
+    all=all.concat(data||[]);
+
+
+    if(!data || data.length<pageSize){
+
+      break;
+
+    }
+
+
+    from+=pageSize;
+
+  }
+
+
+  return all;
+
+}
+
+
 async function loadDates(){
 
-  const {data,error}=
-    await sb
-      .from('menus')
-      .select('menu_date')
-      .order(
-        'menu_date',
-        {
-          ascending:true
-        }
-      );
-
-
-  if(error) throw error;
+  const data=
+    await fetchAllMenuDates();
 
 
   dates=[
