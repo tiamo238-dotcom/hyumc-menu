@@ -866,6 +866,121 @@ async function parseFile(file){
   let noticeLines=[];
 
 
+  /*
+    주말/공휴일 자동 인식
+
+    엑셀 형식상, 중식이 단일메뉴로 운영되는 날은
+    '오늘은 집밥'의 첫 줄(밥 칸)이 비어있고
+    그 아래부터 '오늘은 일품' 영역까지 이어서
+    하나의 메뉴가 적혀 있습니다.
+
+    그래서 요일(토/일) 대신, '오늘은 집밥' 첫 줄이
+    비어있는 날짜를 사전 스캔해서 자동으로 찾습니다.
+    (주말이든 공휴일이든, 엑셀이 이 형식을 따르면
+    자동으로 인식됩니다)
+  */
+
+  const singleMenuDates=new Set();
+
+  {
+
+    let scanMeal=null;
+
+    let scanSub=null;
+
+    let lunchFirstRow=null;
+
+
+    for(
+      let r=2;
+      r<rows.length;
+      r++
+    ){
+
+      const a=clean(rows[r]?.[0]);
+
+      const b=clean(rows[r]?.[1]);
+
+
+      if(
+        normalized(a)==='원산지' ||
+        normalized(a)==='원 산 지' ||
+        normalized(b)==='원산지' ||
+        normalized(b)==='원 산 지'
+      ){
+
+        break;
+
+      }
+
+
+      const dm=
+        getMealFromRow(a);
+
+
+      if(dm){
+
+        scanMeal=dm;
+
+        scanSub=null;
+
+      }
+
+
+      const ds=
+        detectCategory(
+          scanMeal,a,b
+        );
+
+
+      if(ds){
+
+        scanSub=ds;
+
+
+        if(
+          scanMeal==='중식' &&
+          scanSub==='오늘은 집밥' &&
+          lunchFirstRow===null
+        ){
+
+          lunchFirstRow=r;
+
+          break;
+
+        }
+
+      }
+
+    }
+
+
+    if(lunchFirstRow!==null){
+
+      for(
+        const [col,k]
+        of dateCols
+      ){
+
+        const v=
+          clean(
+            rows[lunchFirstRow]?.[col]
+          );
+
+
+        if(!v){
+
+          singleMenuDates.add(k);
+
+        }
+
+      }
+
+    }
+
+  }
+
+
   for(
     let r=2;
     r<rows.length;
@@ -979,9 +1094,11 @@ async function parseFile(file){
 
 
       /*
-        주말 중식은 '오늘은 집밥' / '오늘은 일품'
-        구분 없이 단일메뉴로 운영되므로
+        중식이 단일메뉴로 운영되는 날(주말/공휴일 등)은
+        '오늘은 집밥' / '오늘은 일품' 구분 없이
         하나의 분류로 합쳐서 저장
+
+        (요일이 아니라 엑셀의 빈칸 형식으로 자동 판별됨)
       */
 
       let finalSub=sub;
@@ -989,7 +1106,7 @@ async function parseFile(file){
 
       if(
         meal==='중식' &&
-        isWeekend(k) &&
+        singleMenuDates.has(k) &&
         (
           sub==='오늘은 집밥' ||
           sub==='오늘은 일품'
@@ -1375,10 +1492,10 @@ $('uploadBtn').onclick=async()=>{
       기존 데이터를 전부 지우고 새로 저장합니다.)
     */
 
-    const {error:delError}=
+    const {error:delError,count:deletedCount}=
       await sb
         .from('menus')
-        .delete()
+        .delete({count:'exact'})
         .neq('id',0);
 
 
@@ -1418,7 +1535,8 @@ $('uploadBtn').onclick=async()=>{
 
       <br>
 
-      총 ${parsed.length}개 메뉴가 저장되었습니다.
+      기존 메뉴 ${deletedCount ?? 0}개 삭제 →
+      새 메뉴 ${parsed.length}개 저장
 
       <br><br>
 
