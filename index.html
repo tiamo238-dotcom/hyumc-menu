@@ -248,6 +248,12 @@
 </div>
 
 
+<div id="slideArea">
+
+
+<div id="menus"></div>
+
+
 <div class="info-boxes">
 
   <div class="g-card">
@@ -354,7 +360,7 @@
 </div>
 
 
-<div id="menus"></div>
+</div>
 
 
 <div class="notice" id="notice">
@@ -406,6 +412,10 @@ const dateSelect=
 
 const menusEl=
   document.getElementById('menus');
+
+
+const slideEl=
+  document.getElementById('slideArea');
 
 const prev=
   document.getElementById('prev');
@@ -1138,7 +1148,7 @@ async function showDate(){
     다시 재생되도록 클래스를 지웠다가 다시 붙입니다.
   */
 
-  menusEl.classList.remove(
+  slideEl.classList.remove(
     'slide-in-left',
     'slide-in-right'
   );
@@ -1146,10 +1156,10 @@ async function showDate(){
 
   if(slideDir){
 
-    void menusEl.offsetWidth;
+    void slideEl.offsetWidth;
 
 
-    menusEl.classList.add(
+    slideEl.classList.add(
       slideDir==='right'
         ?'slide-in-right'
         :'slide-in-left'
