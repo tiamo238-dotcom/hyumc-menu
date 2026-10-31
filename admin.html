@@ -860,6 +860,8 @@ const PDF_MEAL_WORDS=['조식','중식','석식'];
 
 let pdfjsPromise=null;
 
+let pdfLastReason='';
+
 
 /* pdf.js 불러오기 (PDF를 올렸을 때만 불러옴) */
 
@@ -902,7 +904,7 @@ function loadPdfJs(){
   글자 줄은 일부만 어둡기 때문에 걸러집니다.
 */
 
-function findHBorders(img,xa,xb,ya,yb){
+function findHBorders(img,xa,xb,ya,yb,lumT=215,frac=0.9){
 
   const S=PDF_SCALE;
 
@@ -955,11 +957,11 @@ function findHBorders(img,xa,xb,ya,yb){
         0.587*d[i+1]+
         0.114*d[i+2];
 
-      if(lum<215) dark++;
+      if(lum<lumT) dark++;
 
     }
 
-    if(dark/(x1-x0)>=0.9){
+    if(dark/(x1-x0)>=frac){
 
       run.push(y);
 
@@ -1160,27 +1162,90 @@ async function pdfPageToRows(page,fileName){
   /* ---------- 2. 날짜 머리글 ---------- */
 
   const re=
-    /(\d{1,2})\s*\/\s*(\d{1,2})\s*\(\s*([일월화수목금토])\s*\)/;
+    /(\d{1,2})\s*\/\s*(\d{1,2})\s*\(\s*([일월화수목금토])\s*\)/g;
 
-  let heads=
-    items
-      .filter(i=>re.test(i.str))
-      .map(i=>{
 
-        const m=i.str.match(re);
+  /*
+    글자 조각이 '11' '/' '02' '(월)'처럼 나뉘어 읽히는
+    경우도 있어서, 같은 줄의 글자를 이어붙여 찾습니다.
+  */
 
-        return {
-          m:Number(m[1]),
-          d:Number(m[2]),
-          wd:m[3],
-          xc:i.xc,
-          yc:i.yc
-        };
+  const textLines=[];
 
+  for(
+    const it of
+    [...items].sort((p,q)=>p.yc-q.yc)
+  ){
+
+    const L=textLines[textLines.length-1];
+
+    if(L && Math.abs(it.yc-L.yc)<=3){
+
+      L.items.push(it);
+
+    }
+    else{
+
+      textLines.push({yc:it.yc,items:[it]});
+
+    }
+
+  }
+
+
+  let heads=[];
+
+  for(const L of textLines){
+
+    L.items.sort((p,q)=>p.xc-q.xc);
+
+    let text='';
+
+    const map=[];
+
+    L.items.forEach((it,idx)=>{
+
+      for(const ch of it.str){
+
+        text+=ch;
+
+        map.push(idx);
+
+      }
+
+      text+=' ';
+
+      map.push(idx);
+
+    });
+
+    for(const m of text.matchAll(re)){
+
+      const i0=map[m.index];
+
+      const i1=map[m.index+m[0].length-1];
+
+      heads.push({
+        m:Number(m[1]),
+        d:Number(m[2]),
+        wd:m[3],
+        xc:(L.items[i0].xc+L.items[i1].xc)/2,
+        yc:L.yc
       });
 
+    }
 
-  if(!heads.length) return null;
+  }
+
+
+  if(!heads.length){
+
+    pdfLastReason=
+      `날짜 머리글을 찾지 못함 (인식된 글자 ${items.length}개)`;
+
+    return null;
+
+  }
 
 
   const headY=
@@ -1275,16 +1340,42 @@ async function pdfPageToRows(page,fileName){
 
   /* 세부분류칸(활기찬 아침/오늘은 집밥 ...)의 가로선 */
 
-  const subBorders=
-    findHBorders(
-      img,
-      labelRight-0.28*colW+1.5,
-      labelRight-1.5,
-      headY,
-      pageH
-    ).filter(y=>y>headY+1);
+  let bp=[215,0.9];
 
-  if(subBorders.length<3) return null;
+  let subBorders=[];
+
+  for(const cand of [[215,0.9],[235,0.8],[245,0.7]]){
+
+    subBorders=
+      findHBorders(
+        img,
+        labelRight-0.28*colW+1.5,
+        labelRight-1.5,
+        headY,
+        pageH,
+        cand[0],
+        cand[1]
+      ).filter(y=>y>headY+1);
+
+    if(subBorders.length>=3){
+
+      bp=cand;
+
+      break;
+
+    }
+
+  }
+
+  if(subBorders.length<3){
+
+    pdfLastReason=
+      `표 가로선을 찾지 못함 (찾은 선 ${subBorders.length}개)`;
+
+    return null;
+
+  }
+
 
   const bodyTop=subBorders[0];
 
@@ -1297,7 +1388,9 @@ async function pdfPageToRows(page,fileName){
       labelRight-0.6*colW+2,
       labelRight-0.3*colW-2,
       headY,
-      pageH
+      pageH,
+      bp[0],
+      bp[1]
     );
 
 
@@ -1464,7 +1557,9 @@ async function pdfPageToRows(page,fileName){
         colLeft[k]+1.5,
         colRight[k]-1.5,
         bodyTop-2,
-        footerTop+2
+        footerTop+2,
+        bp[0],
+        bp[1]
       )
     );
 
@@ -1687,7 +1782,7 @@ async function parsePdfFile(file){
   if(!pages){
 
     throw new Error(
-      `${file.name}: 식단표를 찾지 못했습니다. 본푸드 주간 메뉴표 PDF가 맞는지 확인해주세요.`
+      `${file.name}: 식단표를 찾지 못했습니다. (${pdfLastReason||'원인 불명'}) 본푸드 주간 메뉴표 PDF가 맞는지 확인해주세요.`
     );
 
   }
