@@ -120,7 +120,7 @@
 <section class="hero">
   <div class="logo">👩‍🍳</div>
   <div class="title">식단 관리자</div>
-  <div class="subtitle">엑셀파일을 올리면 메뉴가 업데이트됩니다.</div>
+  <div class="subtitle">엑셀 또는 PDF 식단표를 올리면 메뉴가 업데이트됩니다.</div>
 </section>
 
 <section id="loginCard" class="admin-card">
@@ -157,7 +157,8 @@
   <h2>📁 새 식단 업로드</h2>
 
   <p class="small">
-    1주차와 2주차 식단 엑셀파일을 각각 선택하세요.
+    1주차와 2주차 식단표를 각각 선택하세요.<br>
+    엑셀(.xlsx)과 PDF(.pdf)를 모두 올릴 수 있고, 주마다 형식이 달라도 됩니다.
   </p>
 
 
@@ -170,7 +171,7 @@
     <input
       id="file1"
       type="file"
-      accept=".xlsx,.xls"
+      accept=".xlsx,.xls,.pdf"
     >
 
   </div>
@@ -185,7 +186,7 @@
     <input
       id="file2"
       type="file"
-      accept=".xlsx,.xls"
+      accept=".xlsx,.xls,.pdf"
     >
 
   </div>
@@ -195,7 +196,7 @@
     class="action secondary"
     id="previewBtn"
   >
-    1. 엑셀 미리보기
+    1. 미리보기
   </button>
 
 
@@ -771,9 +772,28 @@ function parseNotice(raw){
 }
 
 
-/* 하나의 엑셀 파일 분석 */
+/* 파일 하나 분석 (엑셀 / PDF 자동 구분) */
 
 async function parseFile(file){
+
+  const ext=
+    (file.name.split('.').pop()||'')
+      .toLowerCase();
+
+  if(ext==='pdf'){
+
+    return parsePdfFile(file);
+
+  }
+
+  return parseExcelFile(file);
+
+}
+
+
+/* 엑셀 파일 → rows */
+
+async function parseExcelFile(file){
 
   const buf=await file.arrayBuffer();
 
@@ -809,10 +829,887 @@ async function parseFile(file){
     );
 
 
+  return parseRows(rows,file.name);
+
+}
+
+
+/*
+  ===== PDF 식단표 분석 =====
+
+  본푸드 주간 메뉴표 PDF(벡터 PDF)를 읽어서
+  기존 엑셀을 읽은 결과(rows 배열)와 같은 모양으로 바꿔줍니다.
+  → 이후에는 엑셀과 똑같은 parseRows()가 그대로 처리합니다.
+
+  동작 방식
+  1) pdf.js로 글자(위치 포함)를 추출
+  2) 페이지를 그림으로 그려서 표의 가로선 위치를 찾음
+     (오늘은 집밥/오늘은 일품이 하나로 합쳐진 날을
+      구분하기 위해 필요합니다)
+  3) 왼쪽 분류칸(조식/활기찬 아침/...)과 날짜별 칸을
+     선 위치 기준으로 맞춰서 엑셀과 같은 행/열로 재구성
+*/
+
+const PDFJS_BASE=
+  window.PDFJS_BASE||
+  'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/';
+
+const PDF_SCALE=3;
+
+const PDF_MEAL_WORDS=['조식','중식','석식'];
+
+let pdfjsPromise=null;
+
+
+/* pdf.js 불러오기 (PDF를 올렸을 때만 불러옴) */
+
+function loadPdfJs(){
+
+  if(!pdfjsPromise){
+
+    pdfjsPromise=
+      import(PDFJS_BASE+'pdf.min.mjs')
+        .then(lib=>{
+
+          lib.GlobalWorkerOptions.workerSrc=
+            PDFJS_BASE+'pdf.worker.min.mjs';
+
+          return lib;
+
+        })
+        .catch(()=>{
+
+          pdfjsPromise=null;
+
+          throw new Error(
+            'PDF 분석 도구를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.'
+          );
+
+        });
+
+  }
+
+  return pdfjsPromise;
+
+}
+
+
+/*
+  그림(ImageData)에서 가로선 위치 찾기
+
+  xa~xb(pt) 구간에서 거의 전체가 어두운 가로줄을 찾아
+  y 위치(pt) 목록으로 돌려줍니다.
+  글자 줄은 일부만 어둡기 때문에 걸러집니다.
+*/
+
+function findHBorders(img,xa,xb,ya,yb){
+
+  const S=PDF_SCALE;
+
+  const W=img.width;
+
+  const H=img.height;
+
+  const d=img.data;
+
+  const x0=Math.max(0,Math.round(xa*S));
+
+  const x1=Math.min(W,Math.round(xb*S));
+
+  const y0=Math.max(0,Math.floor(ya*S));
+
+  const y1=Math.min(H-1,Math.ceil(yb*S));
+
+
+  if(x1-x0<4) return [];
+
+
+  const found=[];
+
+  let run=[];
+
+
+  const flush=()=>{
+
+    if(!run.length) return;
+
+    found.push(
+      (run[0]+run[run.length-1]+1)/2/S
+    );
+
+    run=[];
+
+  };
+
+
+  for(let y=y0;y<=y1;y++){
+
+    let dark=0;
+
+    for(let x=x0;x<x1;x++){
+
+      const i=(y*W+x)*4;
+
+      const lum=
+        0.299*d[i]+
+        0.587*d[i+1]+
+        0.114*d[i+2];
+
+      if(lum<215) dark++;
+
+    }
+
+    if(dark/(x1-x0)>=0.9){
+
+      run.push(y);
+
+    }
+    else{
+
+      flush();
+
+    }
+
+  }
+
+  flush();
+
+
+  /* 1.5pt 이내로 붙은 선은 하나로 */
+
+  const out=[];
+
+  for(const y of found){
+
+    if(
+      !out.length ||
+      y-out[out.length-1]>1.5
+    ){
+
+      out.push(y);
+
+    }
+
+  }
+
+  return out;
+
+}
+
+
+/* 값 이하 중 가장 큰 선 위치 */
+
+function lastAtOrBefore(list,y,fallback){
+
+  let r=fallback;
+
+  for(const v of list){
+
+    if(v<=y+0.001) r=v;
+
+    else break;
+
+  }
+
+  return r;
+
+}
+
+
+/*
+  PDF 머리글의 월/일/요일로 연도 추정
+
+  PDF에는 연도가 없어서 파일명(예: 본푸드메뉴_26_11_02)의
+  연도를 우선 사용하고, 없으면 오늘 날짜에 가장 가까운
+  연도 중 요일이 맞는 것을 고릅니다.
+*/
+
+function inferPdfDates(heads,fileName){
+
+  const WD='일월화수목금토';
+
+  const build=y0=>{
+
+    let y=y0;
+
+    let prevMonth=heads[0].m;
+
+    return heads.map(h=>{
+
+      if(h.m<prevMonth) y++;
+
+      prevMonth=h.m;
+
+      return {y,m:h.m,d:h.d,wd:h.wd};
+
+    });
+
+  };
+
+  const ok=list=>
+    list.every(x=>
+      WD[
+        new Date(
+          Date.UTC(x.y,x.m-1,x.d)
+        ).getUTCDay()
+      ]===x.wd
+    );
+
+
+  const candidates=[];
+
+  const fm=
+    String(fileName||'').match(
+      /(\d{2,4})[._\-](\d{1,2})[._\-](\d{1,2})/
+    );
+
+  if(fm){
+
+    let y=Number(fm[1]);
+
+    if(y<100) y+=2000;
+
+    candidates.push(y);
+
+  }
+
+  const nowY=new Date().getFullYear();
+
+  [nowY,nowY+1,nowY-1].forEach(y=>{
+
+    if(!candidates.includes(y)) candidates.push(y);
+
+  });
+
+
+  for(const y of candidates){
+
+    const list=build(y);
+
+    if(ok(list)){
+
+      return list.map(x=>
+        `${x.y}-${String(x.m).padStart(2,'0')}-${String(x.d).padStart(2,'0')}`
+      );
+
+    }
+
+  }
+
+
+  throw new Error(
+    'PDF의 날짜(요일)와 맞는 연도를 찾지 못했습니다. 파일명에 날짜를 넣어주세요. (예: 본푸드메뉴_26_11_02.pdf)'
+  );
+
+}
+
+
+/*
+  PDF 한 페이지 → 엑셀 모양 rows
+
+  rows[1] : 날짜 헤더 (2번째 열부터)
+  rows[n] : [meal칸, 분류칸, 날짜1 메뉴, 날짜2 메뉴, ...]
+
+  메뉴표가 아닌 페이지면 null
+*/
+
+async function pdfPageToRows(page,fileName){
+
+  const S=PDF_SCALE;
+
+  const vp1=page.getViewport({scale:1});
+
+  const vp=page.getViewport({scale:S});
+
+
+  /* ---------- 1. 글자 추출 ---------- */
+
+  const tc=await page.getTextContent();
+
+  const items=[];
+
+  for(const it of tc.items){
+
+    const str=String(it.str||'').trim();
+
+    if(!str) continue;
+
+    const [vx,vy]=
+      vp1.convertToViewportPoint(
+        it.transform[4],
+        it.transform[5]
+      );
+
+    const h=Math.abs(it.height)||9;
+
+    const w=Math.abs(it.width)||0;
+
+    items.push({
+
+      str,
+
+      xc:vx+w/2,
+
+      yc:vy-h*0.3
+
+    });
+
+  }
+
+
+  /* ---------- 2. 날짜 머리글 ---------- */
+
+  const re=
+    /(\d{1,2})\s*\/\s*(\d{1,2})\s*\(\s*([일월화수목금토])\s*\)/;
+
+  let heads=
+    items
+      .filter(i=>re.test(i.str))
+      .map(i=>{
+
+        const m=i.str.match(re);
+
+        return {
+          m:Number(m[1]),
+          d:Number(m[2]),
+          wd:m[3],
+          xc:i.xc,
+          yc:i.yc
+        };
+
+      });
+
+
+  if(!heads.length) return null;
+
+
+  const headY=
+    Math.min(...heads.map(h=>h.yc));
+
+  heads=
+    heads
+      .filter(h=>Math.abs(h.yc-headY)<4)
+      .sort((a,b)=>a.xc-b.xc);
+
+
+  const dateKeys=
+    inferPdfDates(heads,fileName);
+
+
+  let colW=97.4;
+
+  if(heads.length>1){
+
+    const diffs=[];
+
+    for(let i=1;i<heads.length;i++){
+
+      diffs.push(heads[i].xc-heads[i-1].xc);
+
+    }
+
+    diffs.sort((a,b)=>a-b);
+
+    colW=diffs[Math.floor(diffs.length/2)];
+
+  }
+
+
+  const colLeft=
+    heads.map(h=>h.xc-colW/2);
+
+  const colRight=
+    heads.map(h=>h.xc+colW/2);
+
+  const labelRight=colLeft[0];
+
+  /* 분류칸을 '구분(조식/중식/석식)칸'과 '세부분류칸'으로 나누는 x */
+
+  const split=labelRight-0.3*colW;
+
+
+  const colOf=xc=>{
+
+    for(let k=0;k<heads.length;k++){
+
+      if(xc>=colLeft[k] && xc<colRight[k]) return k;
+
+    }
+
+    return -1;
+
+  };
+
+
+  /* ---------- 3. 표의 가로선 찾기 ---------- */
+
+  const canvas=document.createElement('canvas');
+
+  canvas.width=Math.ceil(vp.width);
+
+  canvas.height=Math.ceil(vp.height);
+
+  const ctx=
+    canvas.getContext(
+      '2d',
+      {willReadFrequently:true}
+    );
+
+  ctx.fillStyle='#fff';
+
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  await page.render({
+    canvasContext:ctx,
+    viewport:vp
+  }).promise;
+
+  const img=
+    ctx.getImageData(
+      0,0,canvas.width,canvas.height
+    );
+
+
+  const pageH=vp1.height;
+
+
+  /* 세부분류칸(활기찬 아침/오늘은 집밥 ...)의 가로선 */
+
+  const subBorders=
+    findHBorders(
+      img,
+      labelRight-0.28*colW+1.5,
+      labelRight-1.5,
+      headY,
+      pageH
+    ).filter(y=>y>headY+1);
+
+  if(subBorders.length<3) return null;
+
+  const bodyTop=subBorders[0];
+
+
+  /* 구분칸(조식/중식/석식)의 가로선 */
+
+  const mealBorders=
+    findHBorders(
+      img,
+      labelRight-0.6*colW+2,
+      labelRight-0.3*colW-2,
+      headY,
+      pageH
+    );
+
+
+  /* ---------- 4. 왼쪽 분류칸 ---------- */
+
+  const labelItems=
+    items.filter(i=>i.xc<labelRight);
+
+  const norm=s=>
+    String(s).replace(/\s+/g,'');
+
+
+  /* '원산지' 칸 위치 → 메뉴 영역의 끝 */
+
+  let footerTop=null;
+
+  for(const it of labelItems){
+
+    if(norm(it.str).startsWith('원산지')){
+
+      footerTop=
+        lastAtOrBefore(
+          subBorders,
+          it.yc,
+          it.yc
+        );
+
+      break;
+
+    }
+
+  }
+
+  if(footerTop===null){
+
+    footerTop=subBorders[subBorders.length-1];
+
+  }
+
+
+  const sections=[];
+
+  for(let i=0;i<subBorders.length-1;i++){
+
+    const top=subBorders[i];
+
+    const bottom=subBorders[i+1];
+
+    if(top>=footerTop-0.5) break;
+
+    sections.push({top,bottom});
+
+  }
+
+
+  /* 조식/중식/석식 글자와 그 칸의 시작 위치 */
+
+  const mealCells=[];
+
+  for(const it of labelItems){
+
+    if(
+      it.xc<split &&
+      PDF_MEAL_WORDS.includes(it.str)
+    ){
+
+      mealCells.push({
+
+        name:it.str,
+
+        top:lastAtOrBefore(
+          mealBorders,
+          it.yc,
+          bodyTop
+        )
+
+      });
+
+    }
+
+  }
+
+  mealCells.sort((a,b)=>a.top-b.top);
+
+
+  let prevMeal=null;
+
+  for(const sec of sections){
+
+    const lab=
+      labelItems
+        .filter(
+          i=>i.yc>=sec.top && i.yc<sec.bottom
+        )
+        .sort(
+          (p,q)=>p.yc-q.yc||p.xc-q.xc
+        );
+
+    const aText=
+      lab
+        .filter(
+          i=>
+            i.xc<split &&
+            !PDF_MEAL_WORDS.includes(i.str)
+        )
+        .map(i=>i.str)
+        .join('\n');
+
+    const bText=
+      lab
+        .filter(i=>i.xc>=split)
+        .map(i=>i.str)
+        .join('\n');
+
+
+    let meal=null;
+
+    for(const mc of mealCells){
+
+      if(mc.top<=sec.top+0.8) meal=mc.name;
+
+    }
+
+
+    sec.meal=meal;
+
+    sec.hasLabel=
+      !!(aText.trim()||bText.trim());
+
+
+    if(meal && meal!==prevMeal){
+
+      /* 이 구분의 첫 분류 → 엑셀처럼 첫 칸에 '조식' 등 표시 */
+
+      sec.a=meal;
+
+      sec.b=
+        [aText,bText]
+          .filter(Boolean)
+          .join('\n');
+
+      prevMeal=meal;
+
+    }
+    else{
+
+      sec.a=aText;
+
+      sec.b=bText;
+
+    }
+
+    sec.cols=heads.map(()=>[]);
+
+  }
+
+
+  /* ---------- 5. 날짜별 칸 → 분류에 배정 ---------- */
+
+  const colBorders=
+    heads.map((h,k)=>
+      findHBorders(
+        img,
+        colLeft[k]+1.5,
+        colRight[k]-1.5,
+        bodyTop-2,
+        footerTop+2
+      )
+    );
+
+
+  const body=
+    items.filter(
+      i=>
+        i.xc>=labelRight &&
+        i.yc>=bodyTop &&
+        i.yc<footerTop
+    );
+
+
+  for(const it of body){
+
+    const k=colOf(it.xc);
+
+    if(k<0) continue;
+
+    /* 이 글자가 들어있는 칸(셀)의 윗선 */
+
+    const cellTop=
+      lastAtOrBefore(
+        colBorders[k],
+        it.yc,
+        bodyTop
+      );
+
+    const sec=
+      sections.find(
+        s=>
+          s.top<=cellTop+0.8 &&
+          cellTop+0.8<s.bottom
+      );
+
+    if(!sec || !sec.hasLabel || !sec.meal) continue;
+
+    sec.cols[k].push(it);
+
+  }
+
+
+  /* ---------- 6. 칸 안의 글자를 줄 단위 메뉴로 ---------- */
+
+  const toLines=list=>{
+
+    const sorted=
+      [...list].sort(
+        (p,q)=>p.yc-q.yc||p.xc-q.xc
+      );
+
+    const lines=[];
+
+    let lastY=null;
+
+    for(const it of sorted){
+
+      if(
+        lastY!==null &&
+        Math.abs(it.yc-lastY)<=2
+      ){
+
+        lines[lines.length-1]+=' '+it.str;
+
+      }
+      else if(
+        it.str.startsWith('&') &&
+        lines.length
+      ){
+
+        /* '계란볶음밥' 아래줄의 '&자장소스' → 앞줄에 붙임 */
+
+        lines[lines.length-1]+=it.str;
+
+        lastY=it.yc;
+
+        continue;
+
+      }
+      else{
+
+        lines.push(it.str);
+
+      }
+
+      lastY=it.yc;
+
+    }
+
+    return lines;
+
+  };
+
+
+  const rows=[
+    [''],
+    [null,null,...dateKeys]
+  ];
+
+
+  for(const sec of sections){
+
+    if(!sec.hasLabel || !sec.meal) continue;
+
+    const colLines=
+      sec.cols.map(toLines);
+
+    const n=
+      Math.max(
+        ...colLines.map(l=>l.length),
+        0
+      );
+
+    if(!n) continue;
+
+    for(let i=0;i<n;i++){
+
+      rows.push([
+
+        i===0?sec.a:'',
+
+        i===0?sec.b:'',
+
+        ...colLines.map(l=>l[i]??'')
+
+      ]);
+
+    }
+
+  }
+
+
+  /* ---------- 7. 원산지/알레르기 안내문구 ---------- */
+
+  const footer=
+    items
+      .filter(
+        i=>
+          i.xc>=labelRight &&
+          i.yc>=footerTop
+      )
+      .sort((a,b)=>{
+
+        return Math.abs(a.yc-b.yc)<=2
+          ?a.xc-b.xc
+          :a.yc-b.yc;
+
+      })
+      .map(i=>i.str)
+      .join(' ');
+
+  /* 맨 위의 'Take-Out 운영시간' 안내줄은 건너뛰고 '*' 부터 사용 */
+
+  const star=footer.indexOf('*');
+
+  if(star>=0){
+
+    rows.push([
+
+      '원산지',
+
+      null,
+
+      footer.slice(star)
+
+    ]);
+
+  }
+
+
+  return rows;
+
+}
+
+
+/* PDF 파일 → 메뉴 목록 (페이지마다 분석) */
+
+async function parsePdfFile(file){
+
+  const pdfjs=await loadPdfJs();
+
+  const buf=await file.arrayBuffer();
+
+  const doc=
+    await pdfjs.getDocument({
+      data:new Uint8Array(buf)
+    }).promise;
+
+
+  let result=[];
+
+  let pages=0;
+
+
+  for(let p=1;p<=doc.numPages;p++){
+
+    const page=await doc.getPage(p);
+
+    const rows=
+      await pdfPageToRows(
+        page,
+        file.name
+      );
+
+    if(!rows) continue;
+
+    pages++;
+
+    result=
+      result.concat(
+        parseRows(
+          rows,
+          `${file.name} (${p}쪽)`
+        )
+      );
+
+  }
+
+
+  if(!pages){
+
+    throw new Error(
+      `${file.name}: 식단표를 찾지 못했습니다. 본푸드 주간 메뉴표 PDF가 맞는지 확인해주세요.`
+    );
+
+  }
+
+
+  return result;
+
+}
+
+
+/*
+  rows(엑셀 모양의 2차원 배열) → 메뉴 목록
+
+  엑셀과 PDF 모두 이 함수를 거칩니다.
+*/
+
+function parseRows(rows,fileName){
+
   if(rows.length<3){
 
     throw new Error(
-      `${file.name}: 엑셀 내용이 너무 적습니다.`
+      `${fileName}: 파일 내용이 너무 적습니다.`
     );
 
   }
@@ -846,7 +1743,7 @@ async function parseFile(file){
   if(!dateCols.length){
 
     throw new Error(
-      `${file.name}: 2번째 행에서 날짜를 찾지 못했습니다.`
+      `${fileName}: 2번째 행에서 날짜를 찾지 못했습니다.`
     );
 
   }
@@ -1142,7 +2039,7 @@ async function parseFile(file){
   if(!result.length){
 
     throw new Error(
-      `${file.name}: 메뉴를 찾지 못했습니다. 엑셀 형식을 확인해주세요.`
+      `${fileName}: 메뉴를 찾지 못했습니다. 파일 형식을 확인해주세요.`
     );
 
   }
@@ -1374,7 +2271,7 @@ function renderPreview(){
 }
 
 
-/* 엑셀 미리보기 */
+/* 미리보기 (엑셀 / PDF) */
 
 $('previewBtn').onclick=async()=>{
 
@@ -1387,7 +2284,7 @@ $('previewBtn').onclick=async()=>{
   if(!files.length){
 
     $('status').textContent=
-      '1주차 또는 2주차 엑셀파일을 선택하세요.';
+      '1주차 또는 2주차 파일을 선택하세요.';
 
     return;
 
@@ -1399,7 +2296,7 @@ $('previewBtn').onclick=async()=>{
   $('uploadBtn').disabled=true;
 
   $('status').textContent=
-    '엑셀을 분석하는 중입니다...';
+    '파일을 분석하는 중입니다... (PDF는 몇 초 걸릴 수 있어요)';
 
 
   try{
@@ -1444,7 +2341,7 @@ $('previewBtn').onclick=async()=>{
     );
 
     $('status').textContent=
-      '엑셀 분석 오류: '+e.message;
+      '파일 분석 오류: '+e.message;
 
   }
   finally{
